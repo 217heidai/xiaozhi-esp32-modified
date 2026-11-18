@@ -10,17 +10,20 @@
 
 小狗动画放在 `main/assets/emoji/terrier/`，共 12 段，全部 240×240、8fps、32 色，合计约 6.3MB：
 
-| 表情 | 触发 |
-| --- | --- |
-| neutral | 待机 / 连接中 |
-| listening | 正在聆听 |
-| speaking | 正在说话 / 通知 |
-| thinking | 服务端下发 `llm` 情绪 `thinking` |
-| happy | 服务端下发 `llm` 情绪 `happy` |
-| surprised | 服务端下发 `llm` 情绪 `surprised` |
-| error | 出错 |
-| eating、daydreaming、playing、begging | 待机轮播（见下） |
-| welcome | 开机后第一次进入待机时播放一次 |
+| 预览 | 表情 | 触发 |
+| --- | --- | --- |
+| <img src="main/assets/emoji/terrier/neutral.gif" width="120" alt="neutral"> | neutral | 待机 / 连接中 |
+| <img src="main/assets/emoji/terrier/listening.gif" width="120" alt="listening"> | listening | 正在聆听 |
+| <img src="main/assets/emoji/terrier/speaking.gif" width="120" alt="speaking"> | speaking | 正在说话 / 通知 |
+| <img src="main/assets/emoji/terrier/thinking.gif" width="120" alt="thinking"> | thinking | 服务端下发 `llm` 情绪 `thinking` |
+| <img src="main/assets/emoji/terrier/happy.gif" width="120" alt="happy"> | happy | 服务端下发 `llm` 情绪 `happy` |
+| <img src="main/assets/emoji/terrier/surprised.gif" width="120" alt="surprised"> | surprised | 服务端下发 `llm` 情绪 `surprised` |
+| <img src="main/assets/emoji/terrier/error.gif" width="120" alt="error"> | error | 出错 |
+| <img src="main/assets/emoji/terrier/eating.gif" width="120" alt="eating"> | eating | 待机轮播 |
+| <img src="main/assets/emoji/terrier/daydreaming.gif" width="120" alt="daydreaming"> | daydreaming | 待机轮播 |
+| <img src="main/assets/emoji/terrier/playing.gif" width="120" alt="playing"> | playing | 待机轮播 |
+| <img src="main/assets/emoji/terrier/begging.gif" width="120" alt="begging"> | begging | 待机轮播 |
+| <img src="main/assets/emoji/terrier/welcome.gif" width="120" alt="welcome"> | welcome | 开机后第一次进入待机时播放一次 |
 
 表情名就是 GIF 文件名；服务端 `llm` 情绪和 `Alert()` 透传名字即可触发对应动画。
 
