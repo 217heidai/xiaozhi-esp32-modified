@@ -697,7 +697,10 @@ elseif(CONFIG_BOARD_TYPE_MOVECALL_MOJI_ESP32S3)
     set(BOARD_DIR "movecall/moji-esp32s3")
     set(BUILTIN_TEXT_FONT font_noto_sans_basic_20_4)
     set(BUILTIN_ICON_FONT font_material_symbols_20_4)
-    set(DEFAULT_EMOJI_COLLECTION noto-color-emoji_64)
+    # Ported HachimoDock terrier GIFs (main/assets/emoji/terrier/) instead of
+    # the Noto color emoji set; server emotions without a terrier clip fall
+    # back to the built-in Noto emoji font glyphs.
+    set(DEFAULT_EMOJI_COLLECTION terrier)
 elseif(CONFIG_BOARD_TYPE_MOVECALL_MOJI2_ESP32C5)
     set(BOARD_DIR "movecall/moji2-esp32c5")
     set(BUILTIN_TEXT_FONT font_noto_sans_basic_20_4)
@@ -1430,6 +1433,11 @@ function(build_default_assets_bin)
             "${NOTO_FONTS_PATH}/png/${DEFAULT_EMOJI_COLLECTION}/*"
         )
         list(APPEND DEFAULT_ASSETS_DEPENDENCIES ${DEFAULT_EMOJI_FILES})
+        # Repo-local emoji collections (e.g. main/assets/emoji/terrier/).
+        file(GLOB DEFAULT_EMOJI_LOCAL_FILES CONFIGURE_DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets/emoji/${DEFAULT_EMOJI_COLLECTION}/*"
+        )
+        list(APPEND DEFAULT_ASSETS_DEPENDENCIES ${DEFAULT_EMOJI_LOCAL_FILES})
     endif()
 
     # Add default assets extra files if defined

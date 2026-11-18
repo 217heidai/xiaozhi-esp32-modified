@@ -300,6 +300,22 @@ void Application::Run() {
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
 
+#if CONFIG_PET_TERRIER_EMOTIONS
+            // Terrier: while idle, cycle through the idle animations so the
+            // dog does not stay on a single one. Each animation is rotated
+            // at its own full-loop duration (see SetNextIdleEmotion), so it
+            // plays once through and then switches cleanly instead of
+            // restarting and being cut off. Paused while an error is shown.
+            if (GetDeviceState() == kDeviceStateIdle && last_error_message_.empty()) {
+                if (++idle_emotion_ticks_ >= idle_emotion_rotate_after_) {
+                    idle_emotion_ticks_ = 0;
+                    SetNextIdleEmotion();
+                }
+            } else {
+                idle_emotion_ticks_ = 0;
+            }
+#endif
+
             // Print debug info every 10 seconds
             if (clock_ticks_ % 10 == 0) {
                 SystemInfo::PrintHeapStats();
@@ -1030,6 +1046,27 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 #endif
 }
 
+#if CONFIG_PET_TERRIER_EMOTIONS
+void Application::SetNextIdleEmotion() {
+    // Idle animations, in rotation order. "neutral" is idle.wandering.
+    // (reading and traveling were dropped to fit the 8MB assets partition.)
+    static const char* kIdleEmotions[] = {
+        "neutral", "eating", "daydreaming", "playing", "begging",
+    };
+    // Full-loop duration of each idle animation, in seconds, in the same
+    // order. The GIF decoder loops the animation, so rotating exactly at
+    // the duration makes each one play once through and then switch
+    // cleanly, instead of restarting and being cut off mid-loop.
+    static const int kIdleEmotionDurations[] = {9, 9, 9, 9, 7};
+    static constexpr size_t kIdleEmotionCount =
+        sizeof(kIdleEmotions) / sizeof(kIdleEmotions[0]);
+    auto display = Board::GetInstance().GetDisplay();
+    display->SetEmotion(kIdleEmotions[idle_emotion_index_]);
+    idle_emotion_rotate_after_ = kIdleEmotionDurations[idle_emotion_index_];
+    idle_emotion_index_ = (idle_emotion_index_ + 1) % kIdleEmotionCount;
+}
+#endif
+
 void Application::HandleStateChangedEvent() {
     DeviceState new_state = state_machine_.GetState();
     clock_ticks_ = 0;
@@ -1051,8 +1088,22 @@ void Application::HandleStateChangedEvent() {
             if (last_error_message_.empty()) {
                 display->SetStatus(Lang::Strings::STANDBY);
                 display->ClearChatMessages();  // Clear messages first
+#if CONFIG_PET_TERRIER_EMOTIONS
+                // Terrier: first clean idle after boot plays the welcome
+                // animation once; afterwards idle cycles through the idle
+                // animations (see SetNextIdleEmotion()).
+                if (!welcome_played_) {
+                    welcome_played_ = true;
+                    display->SetEmotion("welcome");
+                    idle_emotion_rotate_after_ = 9;  // welcome is a 9s clip
+                } else {
+                    SetNextIdleEmotion();
+                }
+                idle_emotion_ticks_ = 0;
+#else
                 display->SetEmotion(
                     "neutral");  // Then set emotion (wechat mode checks child count)
+#endif
             }
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(true);
@@ -1064,7 +1115,11 @@ void Application::HandleStateChangedEvent() {
             break;
         case kDeviceStateListening:
             display->SetStatus(Lang::Strings::LISTENING);
+#if CONFIG_PET_TERRIER_EMOTIONS
+            display->SetEmotion("listening");
+#else
             display->SetEmotion("neutral");
+#endif
 
             // Make sure the audio processor is running
             if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
@@ -1083,6 +1138,9 @@ void Application::HandleStateChangedEvent() {
             break;
         case kDeviceStateSpeaking:
             display->SetStatus(Lang::Strings::SPEAKING);
+#if CONFIG_PET_TERRIER_EMOTIONS
+            display->SetEmotion("speaking");
+#endif
 
             if (listening_mode_ != kListeningModeRealtime) {
                 audio_service_.EnableVoiceProcessing(false);
@@ -1093,6 +1151,9 @@ void Application::HandleStateChangedEvent() {
             break;
         case kDeviceStateNotifying:
             display->SetStatus(Lang::Strings::SPEAKING);
+#if CONFIG_PET_TERRIER_EMOTIONS
+            display->SetEmotion("speaking");
+#endif
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
             break;

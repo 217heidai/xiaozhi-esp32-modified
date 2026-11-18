@@ -215,6 +215,8 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
 
     // Update time — show HH:MM when idle; refresh immediately on state
     // transitions (update_all=true) and on every minute change thereafter.
+    // Terrier: never show the clock — the dog fills the whole screen.
+#if !CONFIG_PET_TERRIER_EMOTIONS
     if (app.GetDeviceState() == kDeviceStateIdle) {
         time_t now = time(NULL);
         struct tm* tm_now = localtime(&now);
@@ -233,6 +235,7 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
         // Reset so the clock re-appears immediately when idle resumes.
         last_displayed_clock_min_ = -1;
     }
+#endif
 
     esp_pm_lock_acquire(pm_lock_);
     // Update battery icon

@@ -158,6 +158,15 @@ private:
     bool play_popup_on_listening_ = false;  // Flag to play popup sound after state changes to listening
     bool pending_listening_start_ = false;  // Waiting for playback to drain before starting listening (auto mode)
     int clock_ticks_ = 0;
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // Terrier idle-emotion rotation: index into the idle animation list,
+    // seconds since the last rotation while idle, and whether the one-time
+    // welcome animation has played.
+    size_t idle_emotion_index_ = 0;
+    int idle_emotion_ticks_ = 0;
+    int idle_emotion_rotate_after_ = 9;  // seconds to show the current idle emotion
+    bool welcome_played_ = false;
+#endif
     TaskHandle_t activation_task_handle_ = nullptr;
 
 
@@ -177,6 +186,10 @@ private:
     void ConfigureWakeWordForListening();
     void ShowStartupWakeWordHint();
     void HideStartupWakeWordHint();
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // Advance to the next idle animation in the rotation list.
+    void SetNextIdleEmotion();
+#endif
     void StartNotification(std::string audio_url, std::vector<NotifySubtitle> subtitles);
     void StopNotification();
     void HandleNotificationFinished(uint32_t playback_id, bool success);

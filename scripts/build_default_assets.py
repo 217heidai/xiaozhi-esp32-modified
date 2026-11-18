@@ -858,6 +858,8 @@ def get_emoji_collection_path(default_emoji_collection, noto_fonts_path, project
     Supports:
     - PNG emoji collections from noto-fonts (e.g., noto-color-emoji_32)
     - Otto GIF emoji collection (otto-gif)
+    - Repo-local emoji collections under main/assets/emoji/<name>
+      (e.g., the ported HachimoDock terrier GIFs)
     """
     if not default_emoji_collection:
         return None
@@ -885,8 +887,16 @@ def get_emoji_collection_path(default_emoji_collection, noto_fonts_path, project
     emoji_path = os.path.join(noto_fonts_path, 'gif', default_emoji_collection)
     if os.path.exists(emoji_path):
         return emoji_path
-    
-    print(f"Warning: Emoji collection directory not found in png/ or gif/: {default_emoji_collection}")
+
+    # Try repo-local emoji collections (e.g., main/assets/emoji/terrier).
+    if project_root:
+        emoji_path = os.path.join(project_root, 'main', 'assets', 'emoji',
+                                 default_emoji_collection)
+        if os.path.exists(emoji_path):
+            return emoji_path
+
+    print(f"Warning: Emoji collection directory not found in png/, gif/ or "
+          f"main/assets/emoji/: {default_emoji_collection}")
     return None
 
 

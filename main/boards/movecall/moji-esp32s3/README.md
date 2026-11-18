@@ -24,3 +24,18 @@ Xiaozhi Assistant -> Board Type -> Movecall Moji 小智AI衍生版
 ```bash
 idf.py build
 ```
+
+# 西高地小狗表情（HachimoDock 移植）
+
+本板默认把 HachimoDock 的西高地小狗视频以 GIF 表情包进 assets 分区
+（`main/assets/emoji/terrier/`，12 段，240×240，8fps，32 色，共约 6.3MB），
+代替默认的 Noto 彩色 emoji。状态映射（`CONFIG_PET_TERRIER_EMOTIONS`，
+默认开启）为：待机 `neutral`、聆听 `listening`、说话 `speaking`；
+服务端下发的 `thinking` / `happy` / `surprised` / `error`
+也会显示对应的小狗片段；没有对应片段的服务端表情回落为内置 Noto
+emoji 字体字形。正常使用时屏幕只显示小狗，不显示时间、状态栏与聊天
+记录。待机时小狗会轮换：开机先放一次 `welcome`，之后每段播满一遍
+就切到下一个（`neutral` → `eating` → `daydreaming` → `playing` →
+`begging`，循环）。关闭该选项可恢复默认 neutral 表情（仍需把
+`DEFAULT_EMOJI_COLLECTION` 改回 `noto-color-emoji_64` 才能恢复 Noto
+彩色 emoji 图片）。

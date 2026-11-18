@@ -708,6 +708,20 @@ config RESPEAKER_I2S_CLOCK_PROBE_ONLY
         This diagnostic does not initialize I2S or start the Xiaozhi application.
         Disable it and rebuild to restore normal operation.
 
+config PET_TERRIER_EMOTIONS
+    bool "Show HachimoDock terrier clips as device emotions"
+    depends on BOARD_TYPE_MOVECALL_MOJI_ESP32S3
+    default y
+    help
+        Map device states to the ported HachimoDock West Highland Terrier
+        GIF emotions (neutral/thinking/listening/speaking/error/happy/
+        surprised/eating/daydreaming/playing/begging/welcome) instead of
+        the default neutral face. While idle the dog cycles through the
+        idle animations, each playing once through. Requires the terrier
+        emoji collection (main/assets/emoji/terrier/) to be packaged into
+        the assets partition; server emotions without a terrier clip fall
+        back to the built-in Noto emoji font glyphs.
+
 choice XIAOZHI_NETWORK_TYPE
     prompt "Network Type"
     depends on BOARD_TYPE_WAVESHARE_ESP32_P4_NANO

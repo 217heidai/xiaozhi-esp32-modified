@@ -1096,6 +1096,14 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(low_battery_label_, lv_color_white(), 0);
     lv_obj_center(low_battery_label_);
     lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
+
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // Terrier-only screen: hide every built-in UI element so that only the
+    // dog is visible during normal use (top bar, status bar, bottom chat bar).
+    lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+#endif
 }
 
 void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
@@ -1156,7 +1164,9 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         if (content == nullptr || content[0] == '\0') {
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         } else if (!hide_subtitle_) {
+#if !CONFIG_PET_TERRIER_EMOTIONS
             lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+#endif
         }
     }
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
@@ -1450,7 +1460,9 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
             const char* text =
                 (chat_message_label_ != nullptr) ? lv_label_get_text(chat_message_label_) : nullptr;
             if (text != nullptr && text[0] != '\0') {
+#if !CONFIG_PET_TERRIER_EMOTIONS
                 lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+#endif
             }
         }
     }
