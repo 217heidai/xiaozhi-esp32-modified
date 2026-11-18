@@ -1,177 +1,83 @@
-# An MCP-based Chatbot
+# xiaozhi-esp32-modified — HachimoDock 西高地小狗（Movecall Moji 板）
 
-(English | [中文](README_zh.md) | [日本語](README_ja.md))
+这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `aaf1eb7`（2026-11-16）。目标只有一个：把 [HachimoDock](https://github.com/ai-maker-lab/HachimoDock) 的西高地小狗搬到小智的 Movecall Moji 开发板（`movecall-moji-esp32s3`，GC9A01 圆形 240×240 屏）上，正常使用时屏幕只显示小狗，不出现小智自带的 UI。
 
-## Introduction
+上游小智项目本身的介绍、支持的开发板、MCP 等内容请看上游仓库；这里只写本分支改了什么。同步上游的方法见 [TERRIER_SYNC.md](TERRIER_SYNC.md)。
 
-📖 [XiaoZhi AI Guides & Help](https://docs.xiaozhi.me/en/)
+## 改了什么
 
-👉 [Human: Give AI a camera vs AI: Instantly finds out the owner hasn't washed hair for three days【bilibili】](https://www.bilibili.com/video/BV1bpjgzKEhd/)
+### 1. 小狗动画：12 段 GIF，替代默认 Noto 表情
 
-👉 [Handcraft your AI girlfriend, beginner's guide【bilibili】](https://www.bilibili.com/video/BV1XnmFYLEJN/)
+小狗动画放在 `main/assets/emoji/terrier/`，共 12 段，全部 240×240、8fps、32 色，合计约 6.3MB：
 
-As a voice interaction entry, the XiaoZhi AI chatbot leverages the AI capabilities of large models like Qwen / DeepSeek, and achieves multi-terminal control via the MCP protocol.
+| 表情 | 触发 |
+| --- | --- |
+| neutral | 待机 / 连接中 |
+| listening | 正在聆听 |
+| speaking | 正在说话 / 通知 |
+| thinking | 服务端下发 `llm` 情绪 `thinking` |
+| happy | 服务端下发 `llm` 情绪 `happy` |
+| surprised | 服务端下发 `llm` 情绪 `surprised` |
+| error | 出错 |
+| eating、daydreaming、playing、begging | 待机轮播（见下） |
+| welcome | 开机后第一次进入待机时播放一次 |
 
-<img src="docs/mcp-based-graph.jpg" alt="Control everything via MCP" width="320">
+表情名就是 GIF 文件名；服务端 `llm` 情绪和 `Alert()` 透传名字即可触发对应动画。
 
-## Recent Updates
+**去掉的 4 段**：reading、traveling、browsing、done。原因是资源分区只有 8MB 上限，12 段 GIF（6,556,112 字节）加其他资源约 1,579,967 字节，总计 8,136,619 字节，余量约 250KB，再加就超了。
 
-- The project now requires ESP-IDF v6.0.1 or later. [ESP-IDF `release/v6.1`](https://github.com/espressif/esp-idf/tree/release/v6.1) is the recommended SDK branch. ESP-IDF 5.x is no longer supported. The current matrix contains 171 variants; ESP32-S31 builds require IDF 6.1 or later.
-- MQTT and BluFi cryptographic code has migrated to PSA Crypto. IDF 6 component splits and third-party dependency compatibility have also been addressed.
-- Audio pipeline concurrency, MQTT/UDP packet validation, and release-matrix selection have been hardened.
-- ESP32-P4 Rev1 and Rev3 are both supported on IDF 6 with ESP-SR 2.4.7.
+### 2. 纯狗界面：正常使用只显示小狗
 
-### Features Implemented
+- 不显示时钟
+- 不显示聊天记录
+- 不显示顶部栏、状态栏（待机等字样）、底部栏
 
-- Wi-Fi, wired Ethernet, USB RNDIS, and ML307/EC801E or NT26 Cat.1 4G networking; supported boards can switch between Wi-Fi and 4G
-- Offline voice wake-up with [ESP-SR](https://github.com/espressif/esp-sr), including customizable wake words
-- Two communication transports: [WebSocket](docs/websocket.md) and [MQTT + UDP](docs/mqtt-udp.md)
-- Opus audio streaming with conventional streaming ASR + LLM + TTS pipelines and Realtime end-to-end voice models; AEC-capable hardware supports realtime full-duplex interaction
-- Speaker recognition, identifies the current speaker [3D Speaker](https://github.com/modelscope/3D-Speaker)
-- OLED / LCD displays with emoji and rich expression support, plus camera vision input on supported boards
-- Battery display and power management
-- 39 interface languages, with localized voice prompts where available and English fallback
-- ESP32, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-S3, and ESP32-P4 chip platforms
-- Wi-Fi provisioning through hotspot or BluFi
-- Device-side MCP for device control (Speaker, LED, Servo, GPIO, etc.)
-- Cloud-side MCP to extend large model capabilities (smart home control, PC desktop operation, knowledge search, email, etc.)
-- Customizable wake words, fonts, emojis, and chat backgrounds with online web-based editing ([Custom Assets Generator](https://github.com/78/xiaozhi-assets-generator))
+只保留小狗全屏显示。
 
-## Hardware
+### 3. 待机轮播：待机动作轮流播放
 
-### Breadboard DIY Practice
+开机后第一次进入待机先播放一次 `welcome`，之后在待机状态下按顺序轮播：
 
-Follow the step-by-step breadboard tutorial:
+neutral → eating → daydreaming → playing → begging → neutral → …
 
-👉 [ESP32-S3 Breadboard Tutorial](https://docs.xiaozhi.me/en/hardware/breadboard-esp32-s3.html)
+每段播完一整遍才切换（neutral / eating / daydreaming / playing / welcome 各 9 秒，begging 7 秒），不会播一半被切断。离开待机或出现错误提示时轮播复位。
 
-Breadboard demo:
+### 4. 中文 + 唤醒词
 
-![Breadboard Demo](docs/v1/wiring2.jpg)
+- 界面语言：中文（zh-CN）
+- 唤醒词：你好小智
 
-### Supports 138 Board Directories and 171 Release Variants (Partial List)
+### 5. 开关
 
-- <a href="https://oshwhub.com/li-chuang-kai-fa-ban/li-chuang-shi-zhan-pai-esp32-s3-kai-fa-ban" target="_blank" title="LiChuang ESP32-S3 Development Board">LiChuang ESP32-S3 Development Board</a>
-- <a href="https://github.com/espressif/esp-box" target="_blank" title="Espressif ESP32-S3-BOX-3">Espressif ESP32-S3-BOX-3</a>
-- <a href="https://docs.m5stack.com/zh_CN/core/CoreS3" target="_blank" title="M5Stack CoreS3">M5Stack CoreS3</a>
-- <a href="https://docs.m5stack.com/en/atom/Atomic%20Echo%20Base" target="_blank" title="AtomS3R + Echo Base">M5Stack AtomS3R + Echo Base</a>
-- <a href="https://gf.bilibili.com/item/detail/1108782064" target="_blank" title="Magic Button 2.4">Magic Button 2.4</a>
-- <a href="https://www.waveshare.net/shop/ESP32-S3-Touch-AMOLED-1.8.htm" target="_blank" title="Waveshare ESP32-S3-Touch-AMOLED-1.8">Waveshare ESP32-S3-Touch-AMOLED-1.8</a>
-- <a href="https://github.com/Xinyuan-LilyGO/T-Circle-S3" target="_blank" title="LILYGO T-Circle-S3">LILYGO T-Circle-S3</a>
-- <a href="https://oshwhub.com/tenclass01/xmini_c3" target="_blank" title="XiaGe Mini C3">XiaGe Mini C3</a>
-- <a href="https://oshwhub.com/movecall/cuican-ai-pendant-lights-up-y" target="_blank" title="Movecall CuiCan ESP32S3">CuiCan AI Pendant</a>
-- <a href="https://github.com/WMnologo/xingzhi-ai" target="_blank" title="WMnologo-Xingzhi-1.54">WMnologo-Xingzhi-1.54TFT</a>
-- <a href="https://www.seeedstudio.com/SenseCAP-Watcher-W1-A-p-5979.html" target="_blank" title="SenseCAP Watcher">SenseCAP Watcher</a>
-- <a href="https://www.bilibili.com/video/BV1BHJtz6E2S/" target="_blank" title="ESP-HI Low Cost Robot Dog">ESP-HI Low Cost Robot Dog</a>
+`CONFIG_PET_TERRIER_EMOTIONS`（默认开启，仅对 Moji 板生效），位置在 `main/Kconfig.projbuild`。改动基本都包在这个开关里，关掉后恢复上游行为。注意：`DEFAULT_EMOJI_COLLECTION` 被固定设为 `terrier`，所以关掉开关并不会把表情换回默认的 Noto。
 
-<div style="display: flex; justify-content: space-between;">
-  <a href="docs/v1/lichuang-s3.jpg" target="_blank" title="LiChuang ESP32-S3 Development Board">
-    <img src="docs/v1/lichuang-s3.jpg" width="240" />
-  </a>
-  <a href="docs/v1/espbox3.jpg" target="_blank" title="Espressif ESP32-S3-BOX3">
-    <img src="docs/v1/espbox3.jpg" width="240" />
-  </a>
-  <a href="docs/v1/m5cores3.jpg" target="_blank" title="M5Stack CoreS3">
-    <img src="docs/v1/m5cores3.jpg" width="240" />
-  </a>
-  <a href="docs/v1/atoms3r.jpg" target="_blank" title="AtomS3R + Echo Base">
-    <img src="docs/v1/atoms3r.jpg" width="240" />
-  </a>
-  <a href="docs/v1/magiclick.jpg" target="_blank" title="Magic Button 2.4">
-    <img src="docs/v1/magiclick.jpg" width="240" />
-  </a>
-  <a href="docs/v1/waveshare.jpg" target="_blank" title="Waveshare ESP32-S3-Touch-AMOLED-1.8">
-    <img src="docs/v1/waveshare.jpg" width="240" />
-  </a>
-  <a href="docs/v1/lilygo-t-circle-s3.jpg" target="_blank" title="LILYGO T-Circle-S3">
-    <img src="docs/v1/lilygo-t-circle-s3.jpg" width="240" />
-  </a>
-  <a href="docs/v1/xmini-c3.jpg" target="_blank" title="XiaGe Mini C3">
-    <img src="docs/v1/xmini-c3.jpg" width="240" />
-  </a>
-  <a href="docs/v1/movecall-cuican-esp32s3.jpg" target="_blank" title="CuiCan">
-    <img src="docs/v1/movecall-cuican-esp32s3.jpg" width="240" />
-  </a>
-  <a href="docs/v1/wmnologo_xingzhi_1.54.jpg" target="_blank" title="WMnologo-Xingzhi-1.54">
-    <img src="docs/v1/wmnologo_xingzhi_1.54.jpg" width="240" />
-  </a>
-  <a href="docs/v1/sensecap_watcher.jpg" target="_blank" title="SenseCAP Watcher">
-    <img src="docs/v1/sensecap_watcher.jpg" width="240" />
-  </a>
-  <a href="docs/v1/esp-hi.jpg" target="_blank" title="ESP-HI Low Cost Robot Dog">
-    <img src="docs/v1/esp-hi.jpg" width="240" />
-  </a>
-</div>
+## 编译与烧录
 
-## Software
+编译（ESP-IDF release/v6.1）：
 
-### Firmware Flashing
+```bash
+python3 scripts/build.py movecall/moji-esp32s3 --language zh-CN --wake-word nihaoxiaozhi
+```
 
-For beginners, it is recommended to use the firmware that can be flashed without setting up a development environment.
+烧录用 [ESP Launchpad](https://espressif.github.io/esp-launchpad/)（Chrome，DIY 模式），只烧两个文件，NVS 不动，WiFi 设置保留：
 
-The firmware connects to the official [xiaozhi.me](https://xiaozhi.me) server by default. Personal users can register an account to use the Qwen real-time model for free.
+| 文件 | 地址 |
+| --- | --- |
+| `build/xiaozhi.bin` | `0x20000` |
+| `build/generated_assets.bin` | `0x800000` |
 
-👉 [Beginner's Firmware Flashing Guide](https://docs.xiaozhi.me/en/firmware/flashing.html)
+如果板子当前跑在 ota_1 分区、烧完仍显示旧版本，把 `xiaozhi.bin` 改烧到 `0x410000`。
 
-### Development Environment
+## 改动文件
 
-- Cursor or VSCode
-- Install the ESP-IDF plugin. The minimum SDK is [ESP-IDF v6.0.1](https://github.com/espressif/esp-idf/releases/tag/v6.0.1); [ESP-IDF `release/v6.1`](https://github.com/espressif/esp-idf/tree/release/v6.1) is recommended. ESP-IDF 5.x is not supported.
-- Linux is better than Windows for faster compilation and fewer driver issues
-- This project uses Google C++ code style, please ensure compliance when submitting code
-
-Use the `release/v6.1` branch rather than the `v6.1` release tag: an ESP32-C3 Wi-Fi initialization failure with that tag is reported in [#2344](https://github.com/78/xiaozhi-esp32/issues/2344). After switching SDK revisions, run `git submodule update --init --recursive` in the ESP-IDF directory, source its `export.sh`, and run `idf.py fullclean` in this project before rebuilding.
-
-### Developer Documentation
-
-- [Custom Board Guide](docs/custom-board.md) - Learn how to create custom boards for XiaoZhi AI
-- [OTA Configuration, Activation, and Firmware Updates](docs/ota.md) - Device bootstrap HTTP API and protocol capability reporting
-- [MCP Protocol IoT Control Usage](docs/mcp-usage.md) - Learn how to control IoT devices via MCP protocol
-- [MCP Protocol Interaction Flow](docs/mcp-protocol.md) - Device-side MCP protocol implementation
-- [MQTT + UDP Hybrid Communication Protocol Document](docs/mqtt-udp.md)
-- [A detailed WebSocket communication protocol document](docs/websocket.md)
-
-## Large Model Configuration
-
-If you already have a XiaoZhi AI chatbot device and have connected to the official server, you can log in to the [xiaozhi.me](https://xiaozhi.me) console for configuration.
-
-👉 [Backend Operation Video Tutorial (Old Interface)](https://www.bilibili.com/video/BV1jUCUY2EKM/)
-
-## Related Open Source Projects
-
-For server deployment on personal computers, refer to the following open-source projects:
-
-- [xinnan-tech/xiaozhi-esp32-server](https://github.com/xinnan-tech/xiaozhi-esp32-server) Python server
-- [joey-zhou/xiaozhi-esp32-server-java](https://github.com/joey-zhou/xiaozhi-esp32-server-java) Java server
-- [AnimeAIChat/xiaozhi-server-go](https://github.com/AnimeAIChat/xiaozhi-server-go) Golang server
-- [hackers365/xiaozhi-esp32-server-golang](https://github.com/hackers365/xiaozhi-esp32-server-golang) Golang server
-
-Other client projects using the XiaoZhi communication protocol:
-
-- [huangjunsen0406/py-xiaozhi](https://github.com/huangjunsen0406/py-xiaozhi) Python client
-- [TOM88812/xiaozhi-android-client](https://github.com/TOM88812/xiaozhi-android-client) Android client
-- [100askTeam/xiaozhi-linux](http://github.com/100askTeam/xiaozhi-linux) Linux client by 100ask
-- [78/xiaozhi-sf32](https://github.com/78/xiaozhi-sf32) Bluetooth chip firmware by Sichuan
-- [QuecPython/solution-xiaozhiAI](https://github.com/QuecPython/solution-xiaozhiAI) QuecPython firmware by Quectel
-
-Custom Assets Tools:
-
-- [78/xiaozhi-assets-generator](https://github.com/78/xiaozhi-assets-generator) Custom Assets Generator (Wake words, fonts, emojis, backgrounds)
-
-## About the Project
-
-This is an open-source ESP32 project, released under the MIT license, allowing anyone to use it for free, including for commercial purposes.
-
-We hope this project helps everyone understand AI hardware development and apply rapidly evolving large language models to real hardware devices.
-
-If you have any ideas or suggestions, please feel free to raise Issues or join our [Discord](https://discord.gg/C759fGMBcZ) or QQ group: 1095994019
-
-## Star History
-
-<a href="https://star-history.com/#78/xiaozhi-esp32&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=78/xiaozhi-esp32&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=78/xiaozhi-esp32&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=78/xiaozhi-esp32&type=Date" />
- </picture>
-</a>
+| 文件 | 改动 |
+| --- | --- |
+| `main/assets/emoji/terrier/*.gif` | 新增 12 段小狗 GIF |
+| `main/application.cc`、`.h` | 待机轮播逻辑（welcome 一次 + 五段循环） |
+| `main/display/lcd_display.cc` | 非微信分支隐藏顶部栏 / 状态栏 / 底部栏，并守住两处会重新显示底部栏的地方 |
+| `main/display/lvgl_display/lvgl_display.cc` | 小狗模式下不显示待机时钟 |
+| `main/CMakeLists.txt` | Moji 板默认表情集改为 `terrier`，本地表情集参与资源打包 |
+| `scripts/build_default_assets.py` | 优先收集 `main/assets/emoji/<名字>` 下的本地表情集 |
+| `main/Kconfig.projbuild` | 新增 `CONFIG_PET_TERRIER_EMOTIONS` 开关 |
+| `main/boards/movecall/moji-esp32s3/README.md` | Moji 板说明中加入小狗相关内容 |
+| `TERRIER_SYNC.md` | 同步手册：基线、改动清单、同步上游的步骤 |
