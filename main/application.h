@@ -158,6 +158,11 @@ private:
     bool play_popup_on_listening_ = false;  // Flag to play popup sound after state changes to listening
     bool pending_listening_start_ = false;  // Waiting for playback to drain before starting listening (auto mode)
     int clock_ticks_ = 0;
+    // speaking 饥饿看门狗：连续 N 秒音频输出帧计数零增长即判定播放链路卡死，
+    // 主动收尾回 idle，让设备恢复可唤醒（正常段间空窗远达不到阈值，绝不误杀）。
+    uint64_t wd_last_frame_count_ = 0;
+    bool wd_baseline_set_ = false;  // 是否已对齐基线（不用 0 当哨兵，避免 frame_count 恒为 0 时失效）
+    int wd_silent_seconds_ = 0;
     TaskHandle_t activation_task_handle_ = nullptr;
 
 

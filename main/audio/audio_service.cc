@@ -25,6 +25,7 @@
 
 #define TAG "AudioService"
 
+
 AudioService::AudioService() { event_group_ = xEventGroupCreate(); }
 
 AudioService::~AudioService() {
@@ -168,6 +169,7 @@ void AudioService::Start() {
             vTaskDelete(NULL);
         },
         "opus_codec", 2048 * 12, this, 2, &opus_codec_task_handle_);
+
 }
 
 void AudioService::Stop() {
@@ -324,16 +326,102 @@ void AudioService::AudioInputTask() {
 }
 
 void AudioService::AudioOutputTask() {
+    // One 20 ms silence slice, allocated ONCE for the lifetime of this task.
+    // An earlier version allocated a 2.8 KB vector on every silence frame:
+    // a repeated heap allocation in the audio path that fragments the heap
+    // over long runs. Three slices fill one 60 ms protocol slot. The slice is
+    // left all-zero here; any codec-specific treatment (e.g. WM8978 AUTO-MUTE
+    // dither) belongs in that codec's OutputData override, not in core.
+    const size_t frame_samples = static_cast<size_t>(codec_->output_sample_rate()) *
+                                 OPUS_FRAME_DURATION_MS / 1000;
+    constexpr size_t kSilenceSlices = 3;
+    const size_t slice_samples = frame_samples / kSilenceSlices;  // 480 @ 24 kHz
+    std::vector<int16_t> silence_slice(slice_samples, 0);
     while (true) {
         std::unique_lock<std::mutex> lock(audio_queue_mutex_);
-        audio_queue_cv_.wait(
-            lock, [this]() { return !audio_playback_queue_.empty() || service_stopped_.load(); });
+        bool ready = audio_queue_cv_.wait_for(
+            lock, std::chrono::milliseconds(20), [this]() {
+                if (service_stopped_.load()) {
+                    return true;
+                }
+                if (audio_playback_queue_.empty()) {
+                    return false;
+                }
+                // Pre-roll applies **only when playback has not started yet** for the
+                // current generation (last_real_frame_us_ == 0, i.e. right after
+                // ResetDecoder). Once the first frame is out, holding back is always
+                // harmful: either the caller emits silence in place of queued frames
+                // (audible as dropped audio) or it writes nothing and lets I2S
+                // underrun (the original hiccup). Mid-stream the silence keep-alive
+                // below is the correct mechanism.
+                if (prefill_pending_ && last_real_frame_us_ == 0) {
+                    // Remember when the first frame actually queued, then release
+                    // on either a full pre-roll or a timeout. Without the timeout a
+                    // reply shorter than kPlaybackPrefillFrames never plays: the
+                    // queue never fills and the watchdog eventually aborts it.
+                    if (prefill_first_frame_us_ == 0) {
+                        prefill_first_frame_us_ = esp_timer_get_time();
+                    }
+                    const bool filled = audio_playback_queue_.size() >= kPlaybackPrefillFrames;
+                    const bool timed_out =
+                        esp_timer_get_time() - prefill_first_frame_us_ >= kPrefillTimeoutUs;
+                    return filled || timed_out;
+                }
+                return true;
+            });
         if (service_stopped_.load()) {
             break;
         }
+        if (!ready) {
+            // Two situations land here and must not be treated alike:
+            //  a) queue empty and a real frame went out recently -> output silence
+            //     for the skipped 60 ms slot, otherwise I2S stops and restarts
+            //     (the audible hiccup).
+            //  b) waiting for pre-roll (only possible before the first frame) ->
+            //     just re-wait. Never write silence here: it would displace queued
+            //     audio and is heard as dropped frames.
+            const bool queue_empty = audio_playback_queue_.empty();
+            const int64_t now = esp_timer_get_time();
+            const bool stream_live = last_real_frame_us_ > 0 && now - last_real_frame_us_ < 1000000;
+            if (queue_empty && stream_live) {
+                lock.unlock();
+                // Write the 60 ms slot as three 20 ms slices and re-check the
+                // queue between slices. A real frame that arrives while a
+                // blocking 60 ms i2s_channel_write is in flight used to wait
+                // for the whole write; with slices it waits at most one 20 ms
+                // slice. The I2S stream stays continuous (same total samples).
+                // The buffer is all zeros; WM8978's OutputData override adds
+                // its AUTO-MUTE dither, other codecs output plain silence.
+                for (size_t s = 0; s < kSilenceSlices; ++s) {
+                    codec_->OutputData(silence_slice);
+                    {
+                        // Give way immediately if a real frame has arrived.
+                        std::lock_guard<std::mutex> probe(audio_queue_mutex_);
+                        if (!audio_playback_queue_.empty() || service_stopped_.load()) {
+                            break;
+                        }
+                    }
+                }
+            } else if (!stream_live) {
+                // Real stall (>1 s without a frame) or a fresh stream: arm pre-roll
+                // so a restart does not begin from an empty queue.
+                prefill_pending_ = true;
+            }
+            continue;
+        }
+        prefill_pending_ = false;
 
         auto task = std::move(audio_playback_queue_.front());
         audio_playback_queue_.pop_front();
+        // Do NOT re-arm pre-roll here. A transient empty (steady state depth is
+        // ~0) is normal; the silence keep-alive above already covers it. Re-arming
+        // it on every pop-to-empty stalled the output for 4 frames (240 ms) of
+        // injected silence, which sounded like dropped audio. Pre-roll is re-armed
+        // only when the stream really stops (>1 s without a real frame, below) or
+        // on a new playback generation (ResetDecoder).
+        // 持锁写：与 wait 谓词读、ResetDecoder 写同受 audio_queue_mutex_ 保护，
+        // 消除此前在 lock.unlock() 之后写造成的跨任务数据竞争。
+        last_real_frame_us_ = esp_timer_get_time();
         output_in_flight_ = true;
         audio_queue_cv_.notify_all();
         lock.unlock();
@@ -353,6 +441,7 @@ void AudioService::AudioOutputTask() {
         /* Update the last output time */
         last_output_time_ = std::chrono::steady_clock::now();
         debug_statistics_.playback_count++;
+        output_frame_count_.fetch_add(1);  // 看门狗判据：真实成功输出一帧
 
         bool notify_drained = false;
         lock.lock();
@@ -454,6 +543,11 @@ void AudioService::OpusCodecTask() {
             }
             decode_in_flight_ = false;
             debug_statistics_.decode_count++;
+            // No logging in this critical section: audio_queue_mutex_ is held
+            // here, and a 115200-baud ESP_LOGI costs several ms while the
+            // output task is blocked waiting for the same lock. A leftover
+            // per-50-frames debug print here caused an occasional hiccup during
+            // long TTS playback (one line every 3 s, always under the lock).
             const bool notify_drained = MarkPlaybackDrainedLocked();
             audio_queue_cv_.notify_all();
             lock.unlock();
@@ -813,6 +907,9 @@ void AudioService::ResetDecoder() {
         audio_decode_queue_.clear();
         audio_playback_queue_.clear();
         audio_testing_queue_.clear();
+        prefill_pending_ = true;  // new playback stream needs a fresh pre-roll
+        prefill_first_frame_us_ = 0;
+        last_real_frame_us_ = 0;  // no active stream yet
         notify_drained = MarkPlaybackDrainedLocked();
         audio_queue_cv_.notify_all();
     }

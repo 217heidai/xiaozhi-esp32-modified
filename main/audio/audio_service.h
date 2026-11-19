@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 
@@ -39,7 +40,13 @@
 
 #define OPUS_FRAME_DURATION_MS 60
 #define MAX_ENCODE_TASKS_IN_QUEUE 2
-#define MAX_PLAYBACK_TASKS_IN_QUEUE 2
+// The playback queue doubles as the jitter buffer for incoming TTS packets.
+// At 2 frames (120 ms) a UDP packet arriving ~200 ms late drained the queue and
+// produced an audible gap. 4 frames (240 ms) removed most gaps but two
+// back-to-back out-of-order packets still punched through; 6 frames (360 ms)
+// cover that. This firmware has no voice barge-in during speaking, so a deeper
+// queue costs only start-up latency (60 ms per frame) and a few KB of SRAM.
+#define MAX_PLAYBACK_TASKS_IN_QUEUE 6
 #define MAX_DECODE_PACKETS_IN_QUEUE (1200 / OPUS_FRAME_DURATION_MS)
 #define MAX_SEND_PACKETS_IN_QUEUE (2400 / OPUS_FRAME_DURATION_MS)
 #define AUDIO_TESTING_MAX_DURATION_MS 10000
@@ -126,6 +133,8 @@ public:
     bool IsVoiceDetected() const { return voice_detected_; }
     bool IsIdle();
     bool IsPlaybackIdle();
+    // 看门狗用：累计成功输出帧数，单调递增、原子可读。播放任务卡死时停止增长。
+    uint64_t GetOutputFrameCount() const { return output_frame_count_.load(); }
     bool IsWakeWordRunning() const {
         return xEventGroupGetBits(event_group_) & AS_EVENT_WAKE_WORD_RUNNING;
     }
@@ -194,6 +203,34 @@ private:
     bool decode_in_flight_ = false;
     bool output_in_flight_ = false;
     bool playback_drained_notified_ = true;
+
+    // Jitter-buffer pre-roll. Under a steady 60 ms packet rate the playback
+    // queue stays almost empty, so merely raising MAX_PLAYBACK_TASKS_IN_QUEUE
+    // never creates headroom. The server numbers UDP packets by 60 ms time
+    // slots (timestamp == sequence * 60) and skips slots at TTS sentence
+    // boundaries (docs/mqtt-udp.md 4.3 explicitly tolerates sequence jumps).
+    // Deliberately filling the queue before consuming the first frame gives the
+    // output path a small reserve when a stream (re)starts. It applies **only
+    // before the first real frame of a generation**: re-arming it mid-stream
+    // turned every transient empty (steady state depth is ~0) into 4 frames
+    // (240 ms) of injected silence in place of already-queued audio, which was
+    // heard as "dropped frames". Mid-stream gaps are handled by the silence
+    // keep-alive below, not by pre-roll.
+    static constexpr size_t kPlaybackPrefillFrames = 4;
+    // A short reply can decode to fewer than kPlaybackPrefillFrames frames and
+    // then stop. Waiting forever for frame 4 stalled it until the watchdog killed
+    // the session. Once the first frame is queued, start within this window even
+    // if the queue never fills (250 ms ≈ the normal 4-frame pre-roll time).
+    static constexpr int64_t kPrefillTimeoutUs = 250 * 1000;
+    bool prefill_pending_ = true;
+    int64_t prefill_first_frame_us_ = 0;
+
+    // The server numbers UDP packets by 60 ms time slots and skips slots at
+    // TTS sentence boundaries (docs/mqtt-udp.md 4.3). When the playback queue
+    // runs dry mid-stream, keep I2S fed with silence instead of stopping and
+    // restarting the output stream. Stop after 1 s with no real frame so an
+    // idle device does not keep the DAC running forever.
+    int64_t last_real_frame_us_ = 0;
     uint32_t playback_generation_ = 0;
     // For server AEC
     FixedQueue<uint32_t, MAX_TIMESTAMPS_IN_QUEUE> timestamp_queue_;
@@ -207,6 +244,7 @@ private:
 #endif
     std::atomic<bool> service_stopped_{true};
     std::atomic<bool> audio_input_need_warmup_{false};
+    std::atomic<uint64_t> output_frame_count_{0};  // 成功输出帧累计（看门狗判据）
 
     esp_timer_handle_t audio_power_timer_ = nullptr;
     std::chrono::steady_clock::time_point last_input_time_;

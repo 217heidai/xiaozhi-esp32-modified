@@ -300,6 +300,41 @@ void Application::Run() {
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
 
+            // --- speaking 饥饿看门狗（长期稳定运行兜底C）---
+            // 判据：处于 speaking、队列有积压（非 IsPlaybackIdle）、且累计成功
+            // 输出帧数连续 kSpeakingStallSeconds 秒零增长。用真实输出帧计数而非
+            // 队列状态，播放任务卡死时 output_in_flight_ 会让 IsPlaybackIdle()
+            // 反而返回 false，故两者要结合。队列空（服务端段间停顿/收尾）不计数，
+            // 避免弱网下暂停推流被误判为卡死。动作只是把一次已静音的会话收尾回
+            // idle 恢复可唤醒，不删音频、不插静音，与误杀故事的 idle-mute 不同。
+            constexpr int kSpeakingStallSeconds = 12;
+            if (GetDeviceState() == kDeviceStateSpeaking) {
+                uint64_t frame_count = audio_service_.GetOutputFrameCount();
+                if (!wd_baseline_set_) {
+                    wd_last_frame_count_ = frame_count;  // 进入 speaking 首拍对齐基线
+                    wd_baseline_set_ = true;
+                    wd_silent_seconds_ = 0;
+                } else if (frame_count != wd_last_frame_count_) {
+                    wd_last_frame_count_ = frame_count;  // 有真实音频输出，清零
+                    wd_silent_seconds_ = 0;
+                } else if (audio_service_.IsPlaybackIdle()) {
+                    // 无输出但队列也空：服务端暂停推流或会话正在收尾，是健康的
+                    // 等待，不是播放链路卡死。此时不计数，避免误杀正常会话。
+                    wd_silent_seconds_ = 0;
+                } else if (++wd_silent_seconds_ >= kSpeakingStallSeconds) {
+                    // 有积压却连续 kSpeakingStallSeconds 秒无真实输出 -> 真卡死。
+                    ESP_LOGW(TAG, "Speaking stalled: no audio for %d s, recovering to idle",
+                             wd_silent_seconds_);
+                    AbortSpeaking(kAbortReasonNone);
+                    SetDeviceState(kDeviceStateIdle);
+                    wd_silent_seconds_ = 0;
+                    wd_baseline_set_ = false;
+                }
+            } else {
+                wd_silent_seconds_ = 0;
+                wd_baseline_set_ = false;  // 离开 speaking 时复位，下次进入重新对齐
+            }
+
             // Print debug info every 10 seconds
             if (clock_ticks_ % 10 == 0) {
                 SystemInfo::PrintHeapStats();

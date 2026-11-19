@@ -646,6 +646,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_WDMOMO_CGC_144
         bool "WDMomo ESP32-CGC-144"
         depends on IDF_TARGET_ESP32
+    config BOARD_TYPE_ESP32_LIN
+        bool "WhyEngineer Audio Board ESP32-LIN (WM8978, RGB LED)"
+        depends on IDF_TARGET_ESP32
     config BOARD_TYPE_WK_ESP32S3_DEV
         bool "WK ESP32-S3 Dev Board (维控智能开发板)"
         depends on IDF_TARGET_ESP32S3
