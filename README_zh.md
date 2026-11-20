@@ -2,6 +2,19 @@
 
 （中文 | [English](README.md) | [日本語](README_ja.md)）
 
+> **本分支（`xiaozhi-esp32-lin`）是设备定制分支**，不是官方主线。
+> 它把小智移植到 **WhyEngineer ESP32-LIN 音频开发板**（ESP32-WROVER + WM8978 + PAM8403，无屏幕）。
+> 基线：官方 `aaf1eb7`（v2.6.0）。core 改动刻意压到 6 个文件（+183 行）方便跟随官方更新，
+> WM8978 专属行为全部放在 `main/boards/esp32-lin/` 下。
+>
+> - 编译：`python3 scripts/build.py esp32-lin --language zh-CN`
+> - 板级完整文档、根因分析、A/B 数据、官方 merge 清单与现场验收清单：
+>   [`main/boards/esp32-lin/README.md`](main/boards/esp32-lin/README.md)
+> - 深入资料：[`NOISE-ROOT-CAUSE.md`](main/boards/esp32-lin/NOISE-ROOT-CAUSE.md)、
+>   [`audio-playback-debug-playbook_zh.md`](docs/audio-playback-debug-playbook_zh.md)
+> - 已推送到 `https://github.com/217heidai/xiaozhi-esp32-modified`（`xiaozhi-esp32-lin` 分支）；
+>   本地 `main` 保持官方基线未动。
+
 ## 介绍
 
 📖 [小智 AI 教程与帮助](https://docs.xiaozhi.me/zh/)
@@ -51,6 +64,7 @@
 
 ### 支持 138 个板卡目录、171 个固件发布变体（仅展示部分）
 
+- WhyEngineer ESP32-LIN 音频开发板（本分支移植目标 — ESP32-WROVER + WM8978，无屏幕；详见 [`main/boards/esp32-lin/README.md`](main/boards/esp32-lin/README.md)）
 - <a href="https://oshwhub.com/li-chuang-kai-fa-ban/li-chuang-shi-zhan-pai-esp32-s3-kai-fa-ban" target="_blank" title="立创·实战派 ESP32-S3 开发板">立创·实战派 ESP32-S3 开发板</a>
 - <a href="https://github.com/espressif/esp-box" target="_blank" title="乐鑫 ESP32-S3-BOX-3">乐鑫 ESP32-S3-BOX-3</a>
 - <a href="https://docs.m5stack.com/zh_CN/core/CoreS3" target="_blank" title="M5Stack CoreS3">M5Stack CoreS3</a>
