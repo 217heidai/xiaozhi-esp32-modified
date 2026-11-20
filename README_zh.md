@@ -2,10 +2,6 @@
 
 （中文 | [English](README.md) | [日本語](README_ja.md)）
 
-> **ESP32-LIN 移植**：本分支增加了对 WhyEngineer ESP32-LIN 音频开发板的支持
-> （ESP32-WROVER + WM8978，无屏幕）。接线、编译方法和已知问题见
-> [`main/boards/esp32-lin/README.md`](main/boards/esp32-lin/README.md)。
-
 ## 介绍
 
 📖 [小智 AI 教程与帮助](https://docs.xiaozhi.me/zh/)
@@ -55,7 +51,6 @@
 
 ### 支持 138 个板卡目录、171 个固件发布变体（仅展示部分）
 
-- [WhyEngineer ESP32-LIN 音频开发板](main/boards/esp32-lin/README.md)
 - <a href="https://oshwhub.com/li-chuang-kai-fa-ban/li-chuang-shi-zhan-pai-esp32-s3-kai-fa-ban" target="_blank" title="立创·实战派 ESP32-S3 开发板">立创·实战派 ESP32-S3 开发板</a>
 - <a href="https://github.com/espressif/esp-box" target="_blank" title="乐鑫 ESP32-S3-BOX-3">乐鑫 ESP32-S3-BOX-3</a>
 - <a href="https://docs.m5stack.com/zh_CN/core/CoreS3" target="_blank" title="M5Stack CoreS3">M5Stack CoreS3</a>
