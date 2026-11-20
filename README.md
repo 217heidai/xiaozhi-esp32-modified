@@ -2,19 +2,10 @@
 
 (English | [中文](README_zh.md) | [日本語](README_ja.md))
 
-> **This branch (`xiaozhi-esp32-lin`) is a device-specific fork**, not upstream mainline.
-> It ports XiaoZhi to the **WhyEngineer ESP32-LIN audio board** (ESP32-WROVER + WM8978 +
-> PAM8403, no display). Base: official `aaf1eb7` (v2.6.0). Changes are kept minimal in
-> 6 core files (+183 lines) so upstream merges stay easy; all WM8978-specific behaviour
-> lives under `main/boards/esp32-lin/`.
->
-> - Build: `python3 scripts/build.py esp32-lin --language zh-CN`
-> - Full board notes, root-cause studies, A/B data, upstream-merge checklist and the
->   on-site acceptance checklist: [`main/boards/esp32-lin/README.md`](main/boards/esp32-lin/README.md)
-> - Deep-dive: [`NOISE-ROOT-CAUSE.md`](main/boards/esp32-lin/NOISE-ROOT-CAUSE.md),
->   [`audio-playback-debug-playbook_zh.md`](docs/audio-playback-debug-playbook_zh.md)
-> - Pushed to `https://github.com/217heidai/xiaozhi-esp32-modified` (branch `xiaozhi-esp32-lin`);
->   local `main` is left at the official baseline.
+> **ESP32-LIN port**: this branch adds support for the WhyEngineer ESP32-LIN audio board
+> (ESP32-WROVER + WM8978, no display). See
+> [`main/boards/esp32-lin/README.md`](main/boards/esp32-lin/README.md) for wiring,
+> build instructions and known issues.
 
 ## Introduction
 
@@ -65,7 +56,7 @@ Breadboard demo:
 
 ### Supports 138 Board Directories and 171 Release Variants (Partial List)
 
-- WhyEngineer ESP32-LIN Audio Board (this fork's target — ESP32-WROVER + WM8978, no display; see [`main/boards/esp32-lin/README.md`](main/boards/esp32-lin/README.md))
+- [WhyEngineer ESP32-LIN Audio Board](main/boards/esp32-lin/README.md)
 - <a href="https://oshwhub.com/li-chuang-kai-fa-ban/li-chuang-shi-zhan-pai-esp32-s3-kai-fa-ban" target="_blank" title="LiChuang ESP32-S3 Development Board">LiChuang ESP32-S3 Development Board</a>
 - <a href="https://github.com/espressif/esp-box" target="_blank" title="Espressif ESP32-S3-BOX-3">Espressif ESP32-S3-BOX-3</a>
 - <a href="https://docs.m5stack.com/zh_CN/core/CoreS3" target="_blank" title="M5Stack CoreS3">M5Stack CoreS3</a>
