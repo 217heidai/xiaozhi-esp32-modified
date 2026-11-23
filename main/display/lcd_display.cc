@@ -1142,6 +1142,22 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
     ESP_ERROR_CHECK(esp_timer_start_once(preview_timer_, PREVIEW_IMAGE_DURATION_MS * 1000));
 }
 
+void LcdDisplay::SetStatus(const char* status) {
+    LvglDisplay::SetStatus(status);
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // Terrier: the status bar itself is hidden for the dog-only screen; show
+    // it only while provisioning or activating, and hide it back on the next
+    // status update once those states are over.
+    if (status_bar_ != nullptr) {
+        if (ShouldShowSetupUi()) {
+            lv_obj_remove_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+#endif
+}
+
 void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     if (!setup_ui_called_) {
         ESP_LOGW(TAG, "SetChatMessage('%s', '%s') called before SetupUI() - message will be lost!",
@@ -1163,10 +1179,8 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     if (bottom_bar_ != nullptr) {
         if (content == nullptr || content[0] == '\0') {
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-        } else if (!hide_subtitle_) {
-#if !CONFIG_PET_TERRIER_EMOTIONS
+        } else if (!hide_subtitle_ && ShouldShowSetupUi()) {
             lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-#endif
         }
     }
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
@@ -1459,10 +1473,8 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
             // Only show if there is actual content to display
             const char* text =
                 (chat_message_label_ != nullptr) ? lv_label_get_text(chat_message_label_) : nullptr;
-            if (text != nullptr && text[0] != '\0') {
-#if !CONFIG_PET_TERRIER_EMOTIONS
+            if (text != nullptr && text[0] != '\0' && ShouldShowSetupUi()) {
                 lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-#endif
             }
         }
     }

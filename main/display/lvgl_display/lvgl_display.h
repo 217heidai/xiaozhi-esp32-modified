@@ -54,6 +54,11 @@ protected:
     int last_displayed_clock_min_ = -1;   // -1 forces update on first idle tick
     std::unique_ptr<DynamicGlyphCache> dynamic_glyph_cache_;
 
+    // Terrier: the dog-only screen hides the status/chat bars, except while
+    // the device is being provisioned or activated, when the user must see
+    // the hotspot URL and the activation message.
+    bool ShouldShowSetupUi() const;
+
     friend class DisplayLockGuard;
     virtual bool Lock(int timeout_ms = 0) = 0;
     virtual void Unlock() = 0;

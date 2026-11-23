@@ -1,6 +1,6 @@
 # xiaozhi-esp32-modified — HachimoDock 西高地小狗（Movecall Moji 板）
 
-这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `aaf1eb7`（2026-11-16）。目标只有一个：把 [HachimoDock](https://github.com/ai-maker-lab/HachimoDock) 的西高地小狗搬到小智的 Movecall Moji 开发板（`movecall-moji-esp32s3`，GC9A01 圆形 240×240 屏）上，正常使用时屏幕只显示小狗，不出现小智自带的 UI。
+这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `92d400d`（2026-11-21）。目标只有一个：把 [HachimoDock](https://github.com/ai-maker-lab/HachimoDock) 的西高地小狗搬到小智的 Movecall Moji 开发板（`movecall-moji-esp32s3`，GC9A01 圆形 240×240 屏）上，正常使用时屏幕只显示小狗，不出现小智自带的 UI。
 
 上游小智项目本身的介绍、支持的开发板、MCP 等内容请看上游仓库；这里只写本分支改了什么。同步上游的方法见 [TERRIER_SYNC.md](TERRIER_SYNC.md)。
 

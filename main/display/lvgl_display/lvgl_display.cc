@@ -143,6 +143,18 @@ LvglDisplay::~LvglDisplay() {
     }
 }
 
+bool LvglDisplay::ShouldShowSetupUi() const {
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // Terrier: keep the dog-only screen, except while provisioning or
+    // activating, when the hotspot URL and the activation message must be
+    // visible. Returning to idle clears the message and hides the bars again.
+    auto state = Application::GetInstance().GetDeviceState();
+    return state == kDeviceStateWifiConfiguring || state == kDeviceStateActivating;
+#else
+    return true;
+#endif
+}
+
 void LvglDisplay::SetStatus(const char* status) {
     if (!setup_ui_called_) {
         ESP_LOGW(TAG, "SetStatus('%s') called before SetupUI() - message will be lost!", status);

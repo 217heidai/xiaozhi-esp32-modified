@@ -1050,19 +1050,22 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 void Application::SetNextIdleEmotion() {
     // Idle animations, in rotation order. "neutral" is idle.wandering.
     // (reading and traveling were dropped to fit the 8MB assets partition.)
-    static const char* kIdleEmotions[] = {
-        "neutral", "eating", "daydreaming", "playing", "begging",
+    // Name and full-loop duration travel together: the GIF decoder loops
+    // the animation, so rotating exactly at the duration makes each one
+    // play once through and then switch cleanly, instead of restarting and
+    // being cut off mid-loop.
+    struct IdleEmotion {
+        const char* name;
+        int duration_seconds;
     };
-    // Full-loop duration of each idle animation, in seconds, in the same
-    // order. The GIF decoder loops the animation, so rotating exactly at
-    // the duration makes each one play once through and then switch
-    // cleanly, instead of restarting and being cut off mid-loop.
-    static const int kIdleEmotionDurations[] = {9, 9, 9, 9, 7};
+    static const IdleEmotion kIdleEmotions[] = {
+        {"neutral", 9}, {"eating", 9}, {"daydreaming", 9}, {"playing", 9}, {"begging", 7},
+    };
     static constexpr size_t kIdleEmotionCount =
         sizeof(kIdleEmotions) / sizeof(kIdleEmotions[0]);
     auto display = Board::GetInstance().GetDisplay();
-    display->SetEmotion(kIdleEmotions[idle_emotion_index_]);
-    idle_emotion_rotate_after_ = kIdleEmotionDurations[idle_emotion_index_];
+    display->SetEmotion(kIdleEmotions[idle_emotion_index_].name);
+    idle_emotion_rotate_after_ = kIdleEmotions[idle_emotion_index_].duration_seconds;
     idle_emotion_index_ = (idle_emotion_index_ + 1) % kIdleEmotionCount;
 }
 #endif
