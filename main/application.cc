@@ -1052,8 +1052,8 @@ void Application::SetNextIdleEmotion() {
     // Name and full-loop duration travel together: the player loops the
     // animation, so rotating exactly at the duration makes each one play
     // once through and then switch cleanly, instead of restarting and
-    // being cut off mid-loop. reading is 8.5s, rounded up to 9s so the
-    // whole clip plays (the first half-second repeats).
+    // being cut off mid-loop. Durations round down: reading is 8.5s -> 8s,
+    // begging is 7.25s -> 7s, cutting the tail rather than replaying the start.
     struct IdleEmotion {
         const char* name;
         int duration_seconds;
@@ -1064,7 +1064,7 @@ void Application::SetNextIdleEmotion() {
     // traveling (saw travel ideas while browsing) -> back to neutral.
     static const IdleEmotion kIdleEmotions[] = {
         {"neutral", 9},     {"begging", 7}, {"playing", 9},  {"eating", 9},
-        {"daydreaming", 9}, {"reading", 9}, {"browsing", 9}, {"traveling", 9},
+        {"daydreaming", 9}, {"reading", 8}, {"browsing", 9}, {"traveling", 9},
     };
     static constexpr size_t kIdleEmotionCount = sizeof(kIdleEmotions) / sizeof(kIdleEmotions[0]);
     auto display = Board::GetInstance().GetDisplay();
@@ -1118,6 +1118,14 @@ void Application::HandleStateChangedEvent() {
                     "neutral");  // Then set emotion (wechat mode checks child count)
 #endif
             }
+#if CONFIG_PET_TERRIER_EMOTIONS
+            else {
+                // Error shown, so the emotion branch above was skipped and
+                // the spoken flag would linger: a later conversation where
+                // the assistant never spoke would wrongly play "done".
+                conversation_spoken_ = false;
+            }
+#endif
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(true);
             break;
