@@ -8,7 +8,7 @@
 
 ### 1. 小狗动画：16 段 EFC，替代默认 Noto 表情
 
-小狗动画放在 `main/assets/emoji/terrier/`，共 16 段 EFC，全部 240×240、8fps、32 色，合计约 5.3MB。下表用 GIF 预览，预览图在 `docs/images/terrier/`：
+小狗动画放在 `main/assets/emoji/terrier/`，共 16 段 EFC，全部 240×240、8fps、32 色，合计 6,232,509 字节（约 5.95MB）。下表用 GIF 预览，预览图在 `docs/images/terrier/`：
 
 | 预览 | 表情 | 触发 |
 | --- | --- | --- |
@@ -31,7 +31,9 @@
 
 表情名就是文件名（不含扩展名）；服务端 `llm` 情绪和 `Alert()` 透传名字即可触发对应动画。
 
-**找回的 4 段**：reading、traveling、browsing、done。改成 EFC 格式后，16 段合计 5,547,104 字节，加其他资源约 1,580,507 字节，总计 7,127,611 字节，余量约 1.26MB，全都塞得下。
+**找回的 4 段**：reading、traveling、browsing、done。改成 EFC 格式后，16 段合计 6,232,509 字节，加其他资源约 1,581,035 字节，总计 7,813,544 字节，余量约 575KB，全都塞得下。
+
+**编码注意：不要用 PRED。** EFC 编码器支持 `z`（zlib）+ `pred`（预测）两种压缩，但 esp_efc_codec 1.1.0 的 PRED 解码有 bug：播带 PRED 的片段时，解码第 0 帧就会把 TLS 的全局互斥量清零，之后第一次 MQTT 发布直接崩溃（2026-11-26 实测，详情见 TERRIER_SYNC.md“已知坑”）。16 段全部用 `zlib+legacy` 编码（flags `0x04`），不要用 `zlib+pred`（flags `0x0c`）。重新编码命令：`node encode_gif.mjs <in.gif> <out.efc> 4 z legacy`。
 
 ### 2. 纯狗界面：正常使用只显示小狗
 
@@ -45,9 +47,9 @@
 
 开机后第一次进入待机先播放一次 `welcome`，之后在待机状态下按顺序轮播：
 
-neutral → eating → daydreaming → playing → begging → reading → traveling → browsing → neutral → …
+neutral → begging → playing → eating → daydreaming → reading → browsing → traveling → neutral → …
 
-每段播完一整遍才切换（neutral / eating / daydreaming / playing / welcome / reading / traveling / browsing 各 9 秒，begging 7 秒），不会播一半被切断。一轮对话说完回到待机时先放一次 `done`（6 秒），再继续轮播。离开待机或出现错误提示时轮播复位。
+每段按自己的时长播（neutral / playing / eating / daydreaming / traveling / browsing / welcome 各 9 秒，begging 7 秒，reading 8 秒）。时长向下取整：begging 实际 7.25 秒、reading 实际 8.5 秒，尾巴直接切掉，不重播开头。一轮对话说完回到待机时先放一次 `done`（6 秒），再继续轮播。离开待机或出现错误提示时轮播复位；出错时 `conversation_spoken_` 会清掉，避免之后没说话的对话误播 `done`。
 
 ### 4. 中文 + 唤醒词
 
@@ -79,7 +81,7 @@ python3 scripts/build.py movecall/moji-esp32s3 --language zh-CN --wake-word niha
 
 | 文件 | 改动 |
 | --- | --- |
-| `main/assets/emoji/terrier/*.efc` | 新增 16 段小狗 EFC（GIF 改 EFC，体积从约 6.3MB 降到约 5.3MB） |
+| `main/assets/emoji/terrier/*.efc` | 新增 16 段小狗 EFC（GIF 改 EFC，体积从约 6.3MB 降到约 5.95MB；zlib+legacy 编码，禁用 PRED） |
 | `docs/images/terrier/*.gif` | 16 张 GIF 预览，供 README 表格展示 |
 | `main/application.cc`、`.h` | 待机轮播逻辑（welcome 一次 + 八段循环，说完对话放一次 done） |
 | `main/display/lcd_display.cc` | 非微信分支隐藏顶部栏 / 状态栏 / 底部栏，并守住两处会重新显示底部栏的地方；EFC 片段用 lv_efc 播放 |
