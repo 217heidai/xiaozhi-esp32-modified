@@ -1,33 +1,37 @@
 # xiaozhi-esp32-modified — HachimoDock 西高地小狗（Movecall Moji 板）
 
-这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `92d400d`（2026-11-21）。目标只有一个：把 [HachimoDock](https://github.com/ai-maker-lab/HachimoDock) 的西高地小狗搬到小智的 Movecall Moji 开发板（`movecall-moji-esp32s3`，GC9A01 圆形 240×240 屏）上，正常使用时屏幕只显示小狗，不出现小智自带的 UI。
+这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `a3134949`（2026-11-24）。目标只有一个：把 [HachimoDock](https://github.com/ai-maker-lab/HachimoDock) 的西高地小狗搬到小智的 Movecall Moji 开发板（`movecall-moji-esp32s3`，GC9A01 圆形 240×240 屏）上，正常使用时屏幕只显示小狗，不出现小智自带的 UI。
 
 上游小智项目本身的介绍、支持的开发板、MCP 等内容请看上游仓库；这里只写本分支改了什么。同步上游的方法见 [TERRIER_SYNC.md](TERRIER_SYNC.md)。
 
 ## 改了什么
 
-### 1. 小狗动画：12 段 GIF，替代默认 Noto 表情
+### 1. 小狗动画：16 段 EFC，替代默认 Noto 表情
 
-小狗动画放在 `main/assets/emoji/terrier/`，共 12 段，全部 240×240、8fps、32 色，合计约 6.3MB：
+小狗动画放在 `main/assets/emoji/terrier/`，共 16 段 EFC，全部 240×240、8fps、32 色，合计约 5.3MB。下表用 GIF 预览，预览图在 `docs/images/terrier/`：
 
 | 预览 | 表情 | 触发 |
 | --- | --- | --- |
-| <img src="main/assets/emoji/terrier/neutral.gif" width="120" alt="neutral"> | neutral | 待机 / 连接中 |
-| <img src="main/assets/emoji/terrier/listening.gif" width="120" alt="listening"> | listening | 正在聆听 |
-| <img src="main/assets/emoji/terrier/speaking.gif" width="120" alt="speaking"> | speaking | 正在说话 / 通知 |
-| <img src="main/assets/emoji/terrier/thinking.gif" width="120" alt="thinking"> | thinking | 服务端下发 `llm` 情绪 `thinking` |
-| <img src="main/assets/emoji/terrier/happy.gif" width="120" alt="happy"> | happy | 服务端下发 `llm` 情绪 `happy` |
-| <img src="main/assets/emoji/terrier/surprised.gif" width="120" alt="surprised"> | surprised | 服务端下发 `llm` 情绪 `surprised` |
-| <img src="main/assets/emoji/terrier/error.gif" width="120" alt="error"> | error | 出错 |
-| <img src="main/assets/emoji/terrier/eating.gif" width="120" alt="eating"> | eating | 待机轮播 |
-| <img src="main/assets/emoji/terrier/daydreaming.gif" width="120" alt="daydreaming"> | daydreaming | 待机轮播 |
-| <img src="main/assets/emoji/terrier/playing.gif" width="120" alt="playing"> | playing | 待机轮播 |
-| <img src="main/assets/emoji/terrier/begging.gif" width="120" alt="begging"> | begging | 待机轮播 |
-| <img src="main/assets/emoji/terrier/welcome.gif" width="120" alt="welcome"> | welcome | 开机后第一次进入待机时播放一次 |
+| <img src="docs/images/terrier/neutral.gif" width="120" alt="neutral"> | neutral | 待机 / 连接中 |
+| <img src="docs/images/terrier/listening.gif" width="120" alt="listening"> | listening | 正在聆听 |
+| <img src="docs/images/terrier/speaking.gif" width="120" alt="speaking"> | speaking | 正在说话 / 通知 |
+| <img src="docs/images/terrier/thinking.gif" width="120" alt="thinking"> | thinking | 服务端下发 `llm` 情绪 `thinking` |
+| <img src="docs/images/terrier/happy.gif" width="120" alt="happy"> | happy | 服务端下发 `llm` 情绪 `happy` |
+| <img src="docs/images/terrier/surprised.gif" width="120" alt="surprised"> | surprised | 服务端下发 `llm` 情绪 `surprised` |
+| <img src="docs/images/terrier/error.gif" width="120" alt="error"> | error | 出错 |
+| <img src="docs/images/terrier/eating.gif" width="120" alt="eating"> | eating | 待机轮播 |
+| <img src="docs/images/terrier/daydreaming.gif" width="120" alt="daydreaming"> | daydreaming | 待机轮播 |
+| <img src="docs/images/terrier/playing.gif" width="120" alt="playing"> | playing | 待机轮播 |
+| <img src="docs/images/terrier/begging.gif" width="120" alt="begging"> | begging | 待机轮播 |
+| <img src="docs/images/terrier/reading.gif" width="120" alt="reading"> | reading | 待机轮播 |
+| <img src="docs/images/terrier/traveling.gif" width="120" alt="traveling"> | traveling | 待机轮播 |
+| <img src="docs/images/terrier/browsing.gif" width="120" alt="browsing"> | browsing | 待机轮播 |
+| <img src="docs/images/terrier/welcome.gif" width="120" alt="welcome"> | welcome | 开机后第一次进入待机时播放一次 |
+| <img src="docs/images/terrier/done.gif" width="120" alt="done"> | done | 一轮对话说完回到待机时播放一次 |
 
-表情名就是 GIF 文件名；服务端 `llm` 情绪和 `Alert()` 透传名字即可触发对应动画。
+表情名就是文件名（不含扩展名）；服务端 `llm` 情绪和 `Alert()` 透传名字即可触发对应动画。
 
-**去掉的 4 段**：reading、traveling、browsing、done。原因是资源分区只有 8MB 上限，12 段 GIF（6,556,112 字节）加其他资源约 1,579,967 字节，总计 8,136,619 字节，余量约 250KB，再加就超了。
+**找回的 4 段**：reading、traveling、browsing、done。改成 EFC 格式后，16 段合计 5,547,104 字节，加其他资源约 1,580,507 字节，总计 7,127,611 字节，余量约 1.26MB，全都塞得下。
 
 ### 2. 纯狗界面：正常使用只显示小狗
 
@@ -41,9 +45,9 @@
 
 开机后第一次进入待机先播放一次 `welcome`，之后在待机状态下按顺序轮播：
 
-neutral → eating → daydreaming → playing → begging → neutral → …
+neutral → eating → daydreaming → playing → begging → reading → traveling → browsing → neutral → …
 
-每段播完一整遍才切换（neutral / eating / daydreaming / playing / welcome 各 9 秒，begging 7 秒），不会播一半被切断。离开待机或出现错误提示时轮播复位。
+每段播完一整遍才切换（neutral / eating / daydreaming / playing / welcome / reading / traveling / browsing 各 9 秒，begging 7 秒），不会播一半被切断。一轮对话说完回到待机时先放一次 `done`（6 秒），再继续轮播。离开待机或出现错误提示时轮播复位。
 
 ### 4. 中文 + 唤醒词
 
@@ -75,12 +79,14 @@ python3 scripts/build.py movecall/moji-esp32s3 --language zh-CN --wake-word niha
 
 | 文件 | 改动 |
 | --- | --- |
-| `main/assets/emoji/terrier/*.gif` | 新增 12 段小狗 GIF |
-| `main/application.cc`、`.h` | 待机轮播逻辑（welcome 一次 + 五段循环） |
-| `main/display/lcd_display.cc` | 非微信分支隐藏顶部栏 / 状态栏 / 底部栏，并守住两处会重新显示底部栏的地方 |
+| `main/assets/emoji/terrier/*.efc` | 新增 16 段小狗 EFC（GIF 改 EFC，体积从约 6.3MB 降到约 5.3MB） |
+| `docs/images/terrier/*.gif` | 16 张 GIF 预览，供 README 表格展示 |
+| `main/application.cc`、`.h` | 待机轮播逻辑（welcome 一次 + 八段循环，说完对话放一次 done） |
+| `main/display/lcd_display.cc` | 非微信分支隐藏顶部栏 / 状态栏 / 底部栏，并守住两处会重新显示底部栏的地方；EFC 片段用 lv_efc 播放 |
 | `main/display/lvgl_display/lvgl_display.cc` | 小狗模式下不显示待机时钟 |
 | `main/CMakeLists.txt` | Moji 板默认表情集改为 `terrier`，本地表情集参与资源打包 |
 | `scripts/build_default_assets.py` | 优先收集 `main/assets/emoji/<名字>` 下的本地表情集 |
 | `main/Kconfig.projbuild` | 新增 `CONFIG_PET_TERRIER_EMOTIONS` 开关 |
+| `main/idf_component.yml`、`sdkconfig.defaults.esp32s3` | 引入 esp_efc_codec 依赖并开 CONFIG_ESP_EFC_LVGL_WIDGET |
 | `main/boards/movecall/moji-esp32s3/README.md` | Moji 板说明中加入小狗相关内容 |
 | `TERRIER_SYNC.md` | 同步手册：基线、改动清单、同步上游的步骤 |

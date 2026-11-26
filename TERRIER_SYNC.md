@@ -7,14 +7,14 @@
 ## 基线
 
 - 上游：`https://github.com/78/xiaozhi-esp32`
-- 基线提交：`92d400d`（docs: update QQ community group number）
+- 基线提交：`a3134949`（Merge pull request #2451 from Vitalymt/fix/power-save-display-key，2026-11-24）
 - 板子：Movecall Moji ESP32-S3（`movecall/moji-esp32s3`），240×240 圆屏
 - 语言 / 唤醒词是构建参数，不在代码里：`--language zh-CN --wake-word nihaoxiaozhi`
 
 ## 改了什么
 
-共 14 个代码/配置/测试文件、161 行增、24 行删；另删 12 张 GIF、加 16 段 EFC
-（`main/assets/emoji/terrier/`，约 5.3MB，EFC 由用户另行提交，见“提交”一节）。
+共 14 个代码/配置/测试文件、161 行增、24 行删；另把 GIF 预览移到 `docs/images/terrier/`（16 张，含找回的 4 张）、加 16 段 EFC
+（`main/assets/emoji/terrier/`，约 5.3MB，已随 05de81f 提交）。
 所有代码改动都用 `CONFIG_PET_TERRIER_EMOTIONS` 开关包起来，开关一关就
 和官方一模一样（见“开关”一节）。
 
@@ -63,10 +63,10 @@
 改动小、都有开关，正常情况下直接 rebase 就能过。
 
 ```bash
-# 1. 取官方最新版（本分支的 origin 应指向 78/xiaozhi-esp32）
+# 1. 取 main 最新版（fork 的 main 与上游 78/xiaozhi-esp32 保持一致；同步前先确认 fork 的 main 已同步上游）
 git fetch origin
 
-# 2. 把本分支 rebase 到官方最新版（例如官方的 main）
+# 2. 把本分支 rebase 到 main 最新版
 git rebase origin/main
 
 # 3. 有冲突时逐个解。最可能冲突的是 main/application.cc
@@ -96,6 +96,7 @@ git rebase --continue
   同步后如果官方改了 assets 分区大小或表情打包方式，先确认 16 段 EFC
   仍能塞进分区（见“资源预算”）。
 - `main/Kconfig.projbuild`：只新增一个选项，几乎不会冲突。
+- 根 `README.md`：本分支把它重写成了中文版，上游每次改它都会冲突；解法是保留本分支的版本（它没有 QQ 群号等上游内容，无需合上游的改动）。
 
 ## 资源预算
 
