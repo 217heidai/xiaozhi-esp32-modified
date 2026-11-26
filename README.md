@@ -1,6 +1,6 @@
 # xiaozhi-esp32-modified — ESP32-LIN 音频板
 
-这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `aaf1eb7`（2026-11-16，v2.6.0）。目标只有一个：把小智固件移植到 WhyEngineer ESP32-LIN 音频开发板（ESP32-WROVER + WM8978 + PAM8403，无屏幕，RGB 灯显示状态），并解决这块板在长 TTS 播放中的断声、顿一下和待命底噪问题。
+这是 [78/xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 的一个改造分支，基线为上游提交 `a3134949`（2026-11-24）。目标只有一个：把小智固件移植到 WhyEngineer ESP32-LIN 音频开发板（ESP32-WROVER + WM8978 + PAM8403，无屏幕，RGB 灯显示状态），并解决这块板在长 TTS 播放中的断声、顿一下和待命底噪问题。
 
 上游小智项目本身的介绍、支持的开发板、MCP 等内容请看上游仓库；这里只写本分支改了什么。同步上游的方法与逐 hunk 取舍清单见 [板级 README](main/boards/esp32-lin/README.md) 的「同步官方更新」小节。
 
