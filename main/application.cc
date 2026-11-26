@@ -1058,12 +1058,15 @@ void Application::SetNextIdleEmotion() {
         const char* name;
         int duration_seconds;
     };
+    // Order follows a dog's day, each step a natural result of the last:
+    // neutral -> begging (wants attention) -> playing -> eating (hungry
+    // after play) -> daydreaming (food coma) -> reading -> browsing ->
+    // traveling (saw travel ideas while browsing) -> back to neutral.
     static const IdleEmotion kIdleEmotions[] = {
-        {"neutral", 9}, {"eating", 9}, {"daydreaming", 9}, {"playing", 9}, {"begging", 7},
-        {"reading", 9}, {"traveling", 9}, {"browsing", 9},
+        {"neutral", 9},     {"begging", 7}, {"playing", 9},  {"eating", 9},
+        {"daydreaming", 9}, {"reading", 9}, {"browsing", 9}, {"traveling", 9},
     };
-    static constexpr size_t kIdleEmotionCount =
-        sizeof(kIdleEmotions) / sizeof(kIdleEmotions[0]);
+    static constexpr size_t kIdleEmotionCount = sizeof(kIdleEmotions) / sizeof(kIdleEmotions[0]);
     auto display = Board::GetInstance().GetDisplay();
     display->SetEmotion(kIdleEmotions[idle_emotion_index_].name);
     idle_emotion_rotate_after_ = kIdleEmotions[idle_emotion_index_].duration_seconds;
