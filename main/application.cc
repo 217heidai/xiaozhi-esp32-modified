@@ -303,9 +303,9 @@ void Application::Run() {
 #if CONFIG_PET_TERRIER_EMOTIONS
             // Terrier: while idle, cycle through the idle animations so the
             // dog does not stay on a single one. Each animation is rotated
-            // at its own full-loop duration (see SetNextIdleEmotion), so it
-            // plays once through and then switches cleanly instead of
-            // restarting and being cut off. Paused while an error is shown.
+            // at its table duration (see SetNextIdleEmotion); durations
+            // round down, so begging and reading are cut a little short
+            // instead of replaying the start. Paused while an error is shown.
             if (GetDeviceState() == kDeviceStateIdle && last_error_message_.empty()) {
                 if (++idle_emotion_ticks_ >= idle_emotion_rotate_after_) {
                     idle_emotion_ticks_ = 0;
@@ -1049,11 +1049,10 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 #if CONFIG_PET_TERRIER_EMOTIONS
 void Application::SetNextIdleEmotion() {
     // Idle animations, in rotation order. "neutral" is idle.wandering.
-    // Name and full-loop duration travel together: the player loops the
-    // animation, so rotating exactly at the duration makes each one play
-    // once through and then switch cleanly, instead of restarting and
-    // being cut off mid-loop. Durations round down: reading is 8.5s -> 8s,
-    // begging is 7.25s -> 7s, cutting the tail rather than replaying the start.
+    // Name and duration travel together: the player loops the animation,
+    // so rotating at the duration switches cleanly instead of restarting
+    // mid-loop. Durations round down: reading is 8.5s -> 8s, begging is
+    // 7.25s -> 7s, cutting the tail rather than replaying the start.
     struct IdleEmotion {
         const char* name;
         int duration_seconds;

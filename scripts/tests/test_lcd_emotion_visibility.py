@@ -60,7 +60,8 @@ void lv_label_set_text(lv_obj_t* o, const char* s) { o->text = s; }
 void lv_obj_set_style_text_font(lv_obj_t*, const lv_font_t*, int) {}
 void lv_image_set_src(lv_obj_t* o, const void* s) { o->source = s; }
 void lv_efc_set_src_data(lv_obj_t*, const void*, size_t) {}
-bool lv_efc_is_loaded(lv_obj_t* o) { return o != nullptr; }
+bool lv_efc_load_ok = true;
+bool lv_efc_is_loaded(lv_obj_t* o) { return lv_efc_load_ok && o != nullptr; }
 void lv_efc_play(lv_obj_t*) {}
 void lv_efc_resume(lv_obj_t*) {}
 void lv_efc_pause(lv_obj_t*) {}
@@ -161,6 +162,17 @@ int main(int argc, char** argv) {
         assert(!display.gif_controller_);
         return 0;
     }
+    if (scenario == "failed-efc") {
+        // EFC load failure: the widget stays hidden, the stale label text
+        // is cleared (welcome has no glyph), and nothing is left playing.
+        display.label.text = "stale";
+        lv_efc_load_ok = false;
+        assert(!display.SetEmotion("welcome"));
+        assert(display.efc.hidden && display.image.hidden && !display.label.hidden);
+        assert(!display.emotion_uses_efc_ && !display.emotion_uses_image_);
+        assert(display.label.text.empty());
+        return 0;
+    }
     if (scenario == "efc") {
         assert(display.SetEmotion("welcome"));
         assert(!display.efc.hidden && display.image.hidden && display.label.hidden);
@@ -254,3 +266,6 @@ int main(int argc, char** argv) {
 
     def test_efc_emotion_uses_efc_widget_instead_of_the_image_slot(self):
         self.check_scenario("efc")
+
+    def test_failed_efc_load_clears_the_stale_label(self):
+        self.check_scenario("failed-efc")

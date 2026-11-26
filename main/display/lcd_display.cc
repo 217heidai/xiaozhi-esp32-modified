@@ -1338,8 +1338,25 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
             ShowEmotion();
             shown = true;
         } else {
-            // Keep a valid label fallback instead of a broken clip.
+            // EFC failed to load: fall back to this emotion's glyph if
+            // one exists, otherwise clear the label so no stale glyph
+            // from the previous emotion stays on screen.
             ESP_LOGE(TAG, "Failed to load EFC for emotion: %s", emotion);
+            auto lvgl_theme = static_cast<LvglTheme*>(current_theme_);
+            const char* utf8 = noto_emoji_get_utf8(emotion);
+            const lv_font_t* emotion_font = lvgl_theme->emoji_font()->font();
+            if (utf8 == nullptr) {
+                utf8 = material_symbols_get_utf8(emotion);
+                emotion_font = lvgl_theme->large_icon_font()->font();
+            }
+            if (emoji_label_ != nullptr) {
+                if (utf8 != nullptr) {
+                    lv_obj_set_style_text_font(emoji_label_, emotion_font, 0);
+                    lv_label_set_text(emoji_label_, utf8);
+                } else {
+                    lv_label_set_text(emoji_label_, "");
+                }
+            }
             emotion_uses_image_ = false;
             ShowEmotion();
         }

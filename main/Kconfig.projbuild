@@ -720,8 +720,9 @@ config PET_TERRIER_EMOTIONS
         EFC emotions (neutral/thinking/listening/speaking/error/happy/
         surprised/eating/daydreaming/playing/begging/reading/traveling/
         browsing/welcome/done) instead of the default neutral face. While
-        idle the dog cycles through the idle animations, each playing once
-        through. Requires the terrier emoji collection
+        idle the dog cycles through the idle animations, each playing for
+        its table duration (rounded down, so begging and reading are cut
+        a little short). Requires the terrier emoji collection
         (main/assets/emoji/terrier/) to be packaged into the assets
         partition; server emotions without a terrier clip fall back to the
         built-in Noto emoji font glyphs.

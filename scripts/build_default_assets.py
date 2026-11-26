@@ -859,7 +859,7 @@ def get_emoji_collection_path(default_emoji_collection, noto_fonts_path, project
     - PNG emoji collections from noto-fonts (e.g., noto-color-emoji_32)
     - Otto GIF emoji collection (otto-gif)
     - Repo-local emoji collections under main/assets/emoji/<name>
-      (e.g., the ported HachimoDock terrier GIFs)
+      (e.g., the ported HachimoDock terrier EFC clips)
     """
     if not default_emoji_collection:
         return None
