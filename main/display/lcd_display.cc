@@ -569,6 +569,7 @@ void LcdDisplay::SetupUI() {
 #if CONFIG_PET_TERRIER_EMOTIONS
     // EFC player for the terrier clips; same geometry as emoji_image_.
     efc_image_ = lv_efc_create(screen);
+    lv_efc_set_frame_delay(efc_image_, 125);  // Terrier clips are 8 fps; player defaults to 33 ms.
     lv_obj_align(efc_image_, LV_ALIGN_TOP_MID, 0, text_font->line_height + lvgl_theme->spacing(8));
     lv_obj_add_flag(efc_image_, LV_OBJ_FLAG_HIDDEN);
 #endif
@@ -973,6 +974,7 @@ void LcdDisplay::SetupUI() {
 #if CONFIG_PET_TERRIER_EMOTIONS
     // EFC player for the terrier clips; same geometry as emoji_image_.
     efc_image_ = lv_efc_create(emoji_box_);
+    lv_efc_set_frame_delay(efc_image_, 125);  // Terrier clips are 8 fps; player defaults to 33 ms.
     lv_obj_center(efc_image_);
     lv_obj_add_flag(efc_image_, LV_OBJ_FLAG_HIDDEN);
 #endif
