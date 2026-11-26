@@ -26,6 +26,10 @@ protected:
     lv_obj_t* preview_image_ = nullptr;
     lv_obj_t* emoji_label_ = nullptr;
     lv_obj_t* emoji_image_ = nullptr;
+#if CONFIG_PET_TERRIER_EMOTIONS
+    lv_obj_t* efc_image_ = nullptr;
+    bool emotion_uses_efc_ = false;
+#endif
     std::unique_ptr<LvglGif> gif_controller_ = nullptr;
     bool emotion_uses_image_ = false;
     lv_obj_t* emoji_box_ = nullptr;

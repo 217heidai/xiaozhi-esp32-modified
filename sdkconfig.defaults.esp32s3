@@ -38,4 +38,7 @@ CONFIG_LV_USE_SNAPSHOT=y
 # scripts/build.py; do not repeat that override on each board.
 CONFIG_LV_USE_BUILTIN_MALLOC=y
 # CONFIG_LV_USE_CLIB_MALLOC is not set
+# EFC emote clips (terrier): the LVGL player widget for the 240x240 EFC
+# animations in main/assets/emoji/terrier/.
+CONFIG_ESP_EFC_LVGL_WIDGET=y
 CONFIG_LV_MEM_SIZE_KILOBYTES=1024

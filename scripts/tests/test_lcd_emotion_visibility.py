@@ -30,6 +30,7 @@ class LcdEmotionVisibilityTests(unittest.TestCase):
 #include <string>
 #include <vector>
 #define CONFIG_USE_WECHAT_MESSAGE_STYLE 1
+#define CONFIG_PET_TERRIER_EMOTIONS 1
 #define ESP_LOGW(...)
 #define ESP_LOGI(...)
 #define ESP_LOGE(...)
@@ -58,6 +59,11 @@ const char* lv_label_get_text(lv_obj_t* o) { return o->text.c_str(); }
 void lv_label_set_text(lv_obj_t* o, const char* s) { o->text = s; }
 void lv_obj_set_style_text_font(lv_obj_t*, const lv_font_t*, int) {}
 void lv_image_set_src(lv_obj_t* o, const void* s) { o->source = s; }
+void lv_efc_set_src_data(lv_obj_t*, const void*, size_t) {}
+bool lv_efc_is_loaded(lv_obj_t* o) { return o != nullptr; }
+void lv_efc_play(lv_obj_t*) {}
+void lv_efc_resume(lv_obj_t*) {}
+void lv_efc_pause(lv_obj_t*) {}
 const char* noto_emoji_get_utf8(const char* emotion) {
     return strcmp(emotion, "happy") == 0 ? "happy glyph" : nullptr;
 }
@@ -67,14 +73,19 @@ const char* material_symbols_get_utf8(const char* emotion) {
 struct Image {
     bool gif = false;
     bool decodable = true;
+    bool efc = false;
+    const void* data = nullptr;
+    size_t data_size = 0;
     bool IsGif() const { return gif; }
+    bool IsEfc() const { return efc; }
     const Image* image_dsc() const { return this; }
 };
 struct EmojiCollection {
-    Image neutral, sleepy{true};
+    Image neutral, sleepy{true}, dog{false, true, true};
     Image* GetEmojiImage(const char* emotion) {
         if (strcmp(emotion, "neutral") == 0) return &neutral;
         if (strcmp(emotion, "sleepy") == 0) return &sleepy;
+        if (strcmp(emotion, "welcome") == 0) return &dog;
         return nullptr;
     }
 };
@@ -107,15 +118,17 @@ class LcdDisplay {
 public:
     bool setup_ui_called_ = true;
     bool emotion_uses_image_ = false;
+    bool emotion_uses_efc_ = false;
     LvglTheme theme;
     LvglTheme* current_theme_ = &theme;
-    lv_obj_t content, label, image;
+    lv_obj_t content, label, image, efc;
     lv_obj_t* content_ = &content;
     lv_obj_t* emoji_label_ = &label;
     lv_obj_t* emoji_image_ = &image;
+    lv_obj_t* efc_image_ = &efc;
     lv_obj_t* chat_message_label_ = nullptr;
     std::unique_ptr<LvglGif> gif_controller_;
-    LcdDisplay() { image.hidden = true; }
+    LcdDisplay() { image.hidden = true; efc.hidden = true; }
     bool SetEmotion(const char*);
     void ShowEmotion();
     void RemoveChatMessage(const char*, const char*);
@@ -146,6 +159,18 @@ int main(int argc, char** argv) {
         display.ClearChatMessages();
         assert(display.image.hidden && !display.label.hidden);
         assert(!display.gif_controller_);
+        return 0;
+    }
+    if (scenario == "efc") {
+        assert(display.SetEmotion("welcome"));
+        assert(!display.efc.hidden && display.image.hidden && display.label.hidden);
+        assert(display.emotion_uses_efc_);
+        // Switching to a glyph hides the EFC widget and shows the label.
+        assert(display.SetEmotion("robot_2"));
+        display.ClearChatMessages();
+        assert(display.efc.hidden && display.image.hidden && !display.label.hidden);
+        assert(!display.emotion_uses_efc_);
+        assert(display.label.text == "robot");
         return 0;
     }
     const bool glyph = scenario == "glyph";
@@ -226,3 +251,6 @@ int main(int argc, char** argv) {
 
     def test_failed_gif_decode_does_not_restore_a_freed_image(self):
         self.check_scenario("failed-gif")
+
+    def test_efc_emotion_uses_efc_widget_instead_of_the_image_slot(self):
+        self.check_scenario("efc")

@@ -702,7 +702,7 @@ elseif(CONFIG_BOARD_TYPE_MOVECALL_MOJI_ESP32S3)
     set(BOARD_DIR "movecall/moji-esp32s3")
     set(BUILTIN_TEXT_FONT font_noto_sans_basic_20_4)
     set(BUILTIN_ICON_FONT font_material_symbols_20_4)
-    # Ported HachimoDock terrier GIFs (main/assets/emoji/terrier/) instead of
+    # Ported HachimoDock terrier EFC clips (main/assets/emoji/terrier/) instead of
     # the Noto color emoji set; server emotions without a terrier clip fall
     # back to the built-in Noto emoji font glyphs.
     if(CONFIG_PET_TERRIER_EMOTIONS)

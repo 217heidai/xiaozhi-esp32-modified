@@ -263,6 +263,7 @@ class AssetsTest(unittest.TestCase):
                 assert(lvgl_ready); ++image_creations;
             }
             bool LvglRawImage::IsGif() const { return false; }
+            bool LvglRawImage::IsEfc() const { return false; }
             LvglCBinImage::LvglCBinImage(void*) {
                 assert(lvgl_ready); ++image_creations;
             }

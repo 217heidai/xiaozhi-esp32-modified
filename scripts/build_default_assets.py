@@ -284,7 +284,7 @@ def process_emoji_collection(emoji_collection_dir, assets_dir):
     # Copy each image from input directory to build/assets directory
     for root, dirs, files in os.walk(emoji_collection_dir):
         for file in files:
-            if file.lower().endswith(('.png', '.gif')):
+            if file.lower().endswith(('.png', '.gif', '.efc')):
                 # Copy file
                 src_file = os.path.join(root, file)
                 dst_file = os.path.join(assets_dir, file)

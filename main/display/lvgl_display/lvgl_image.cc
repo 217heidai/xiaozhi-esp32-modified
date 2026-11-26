@@ -22,6 +22,11 @@ bool LvglRawImage::IsGif() const {
     return ptr[0] == 'G' && ptr[1] == 'I' && ptr[2] == 'F';
 }
 
+bool LvglRawImage::IsEfc() const {
+    auto ptr = (const uint8_t*)image_dsc_.data;
+    return ptr[0] == 'E' && ptr[1] == 'F' && ptr[2] == 'C' && ptr[3] == '1';
+}
+
 LvglCBinImage::LvglCBinImage(void* data) {
     image_dsc_ = cbin_img_dsc_create(static_cast<uint8_t*>(data));
 }

@@ -1,6 +1,9 @@
 #include "lcd_display.h"
 #include "assets/lang_config.h"
 #include "gif/lvgl_gif.h"
+#if CONFIG_PET_TERRIER_EMOTIONS
+#include "lv_efc.h"
+#endif
 #include "lvgl_theme.h"
 #include "settings.h"
 
@@ -400,6 +403,21 @@ void LcdDisplay::ShowEmotion() {
             lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
         }
     }
+#if CONFIG_PET_TERRIER_EMOTIONS
+    if (efc_image_ != nullptr) {
+        if (emotion_uses_efc_) {
+            // The EFC widget replaces the static/GIF image slot.
+            lv_obj_remove_flag(efc_image_, LV_OBJ_FLAG_HIDDEN);
+            if (emoji_image_ != nullptr) {
+                lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+            }
+            lv_efc_resume(efc_image_);
+        } else {
+            lv_obj_add_flag(efc_image_, LV_OBJ_FLAG_HIDDEN);
+            lv_efc_pause(efc_image_);
+        }
+    }
+#endif
     if (emotion_uses_image_ && gif_controller_ && !gif_controller_->IsPlaying()) {
         gif_controller_->Start();
     }
@@ -548,6 +566,12 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(emoji_image_, LV_ALIGN_TOP_MID, 0,
                  text_font->line_height + lvgl_theme->spacing(8));
     lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // EFC player for the terrier clips; same geometry as emoji_image_.
+    efc_image_ = lv_efc_create(screen);
+    lv_obj_align(efc_image_, LV_ALIGN_TOP_MID, 0, text_font->line_height + lvgl_theme->spacing(8));
+    lv_obj_add_flag(efc_image_, LV_OBJ_FLAG_HIDDEN);
+#endif
 
     // Display AI logo while booting
     emoji_label_ = lv_label_create(screen);
@@ -946,6 +970,12 @@ void LcdDisplay::SetupUI() {
     emoji_image_ = lv_img_create(emoji_box_);
     lv_obj_center(emoji_image_);
     lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+#if CONFIG_PET_TERRIER_EMOTIONS
+    // EFC player for the terrier clips; same geometry as emoji_image_.
+    efc_image_ = lv_efc_create(emoji_box_);
+    lv_obj_center(efc_image_);
+    lv_obj_add_flag(efc_image_, LV_OBJ_FLAG_HIDDEN);
+#endif
 
     /* Middle layer: preview_image_ - centered display */
     preview_image_ = lv_image_create(screen);
@@ -1121,6 +1151,11 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
         if (gif_controller_) {
             gif_controller_->Start();
         }
+#if CONFIG_PET_TERRIER_EMOTIONS
+        if (emotion_uses_efc_ && efc_image_ != nullptr) {
+            lv_efc_resume(efc_image_);
+        }
+#endif
         return;
     }
 
@@ -1136,6 +1171,11 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
     if (gif_controller_) {
         gif_controller_->Stop();
     }
+#if CONFIG_PET_TERRIER_EMOTIONS
+    if (emotion_uses_efc_ && efc_image_ != nullptr) {
+        lv_efc_pause(efc_image_);
+    }
+#endif
     lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
     esp_timer_stop(preview_timer_);
@@ -1254,6 +1294,9 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
         }
         lv_obj_set_style_text_font(emoji_label_, emotion_font, 0);
         lv_label_set_text(emoji_label_, utf8);
+#if CONFIG_PET_TERRIER_EMOTIONS
+        emotion_uses_efc_ = false;
+#endif
         emotion_uses_image_ = false;
         ShowEmotion();
         // The glyph is this emotion's own, from noto_emoji or material_symbols, not a
@@ -1268,8 +1311,39 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
         gif_controller_->Stop();
         gif_controller_.reset();
     }
+#if CONFIG_PET_TERRIER_EMOTIONS
+    emotion_uses_efc_ = false;
+#endif
     bool shown = false;
-    if (image->IsGif()) {
+    // IsEfc() is always available (base class returns false); only the
+    // lv_efc playback below is terrier-guarded. Keep the #if block
+    // brace-balanced: the host tests extract this function by counting
+    // braces, and a #if/#else if-chain would duplicate the opener.
+    const bool is_efc = image->IsEfc();
+#if CONFIG_PET_TERRIER_EMOTIONS
+    if (is_efc) {
+        // EFC clip: the widget copies the bytes and plays them itself.
+        bool loaded = false;
+        if (efc_image_ != nullptr) {
+            auto dsc = image->image_dsc();
+            lv_efc_set_src_data(efc_image_, dsc->data, dsc->data_size);
+            loaded = lv_efc_is_loaded(efc_image_);
+        }
+        if (loaded) {
+            lv_efc_play(efc_image_);
+            emotion_uses_image_ = true;
+            emotion_uses_efc_ = true;
+            ShowEmotion();
+            shown = true;
+        } else {
+            // Keep a valid label fallback instead of a broken clip.
+            ESP_LOGE(TAG, "Failed to load EFC for emotion: %s", emotion);
+            emotion_uses_image_ = false;
+            ShowEmotion();
+        }
+    }
+#endif
+    if (!is_efc && image->IsGif()) {
         // Create new GIF controller
         gif_controller_ = std::make_unique<LvglGif>(image->image_dsc());
 
@@ -1292,7 +1366,7 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
             emotion_uses_image_ = false;
             ShowEmotion();
         }
-    } else {
+    } else if (!is_efc) {
         lv_image_set_src(emoji_image_, image->image_dsc());
         emotion_uses_image_ = true;
         ShowEmotion();
@@ -1307,6 +1381,11 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
         if (gif_controller_) {
             gif_controller_->Pause();
         }
+#if CONFIG_PET_TERRIER_EMOTIONS
+        if (emotion_uses_efc_ && efc_image_ != nullptr) {
+            lv_efc_pause(efc_image_);
+        }
+#endif
 
         lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);

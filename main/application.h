@@ -160,12 +160,14 @@ private:
     int clock_ticks_ = 0;
 #if CONFIG_PET_TERRIER_EMOTIONS
     // Terrier idle-emotion rotation: index into the idle animation list,
-    // seconds since the last rotation while idle, and whether the one-time
-    // welcome animation has played.
+    // seconds since the last rotation while idle, whether the one-time
+    // welcome animation has played, and whether the assistant spoke in
+    // the conversation that just ended (for the one-time "done" clip).
     size_t idle_emotion_index_ = 0;
     int idle_emotion_ticks_ = 0;
     int idle_emotion_rotate_after_ = 9;  // seconds to show the current idle emotion
     bool welcome_played_ = false;
+    bool conversation_spoken_ = false;
 #endif
     TaskHandle_t activation_task_handle_ = nullptr;
 

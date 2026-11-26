@@ -1049,17 +1049,18 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 #if CONFIG_PET_TERRIER_EMOTIONS
 void Application::SetNextIdleEmotion() {
     // Idle animations, in rotation order. "neutral" is idle.wandering.
-    // (reading and traveling were dropped to fit the 8MB assets partition.)
-    // Name and full-loop duration travel together: the GIF decoder loops
-    // the animation, so rotating exactly at the duration makes each one
-    // play once through and then switch cleanly, instead of restarting and
-    // being cut off mid-loop.
+    // Name and full-loop duration travel together: the player loops the
+    // animation, so rotating exactly at the duration makes each one play
+    // once through and then switch cleanly, instead of restarting and
+    // being cut off mid-loop. reading is 8.5s, rounded up to 9s so the
+    // whole clip plays (the first half-second repeats).
     struct IdleEmotion {
         const char* name;
         int duration_seconds;
     };
     static const IdleEmotion kIdleEmotions[] = {
         {"neutral", 9}, {"eating", 9}, {"daydreaming", 9}, {"playing", 9}, {"begging", 7},
+        {"reading", 9}, {"traveling", 9}, {"browsing", 9},
     };
     static constexpr size_t kIdleEmotionCount =
         sizeof(kIdleEmotions) / sizeof(kIdleEmotions[0]);
@@ -1099,6 +1100,12 @@ void Application::HandleStateChangedEvent() {
                     welcome_played_ = true;
                     display->SetEmotion("welcome");
                     idle_emotion_rotate_after_ = 9;  // welcome is a 9s clip
+                } else if (conversation_spoken_) {
+                    // The assistant actually spoke this round: play the
+                    // "done" clip once, then resume the idle rotation.
+                    conversation_spoken_ = false;
+                    display->SetEmotion("done");
+                    idle_emotion_rotate_after_ = 6;  // done is a 6s clip
                 } else {
                     SetNextIdleEmotion();
                 }
@@ -1143,6 +1150,7 @@ void Application::HandleStateChangedEvent() {
             display->SetStatus(Lang::Strings::SPEAKING);
 #if CONFIG_PET_TERRIER_EMOTIONS
             display->SetEmotion("speaking");
+            conversation_spoken_ = true;
 #endif
 
             if (listening_mode_ != kListeningModeRealtime) {
