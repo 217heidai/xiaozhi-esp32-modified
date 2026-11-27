@@ -222,6 +222,12 @@ private:
     // the session. Once the first frame is queued, start within this window even
     // if the queue never fills (250 ms ≈ the normal 4-frame pre-roll time).
     static constexpr int64_t kPrefillTimeoutUs = 250 * 1000;
+    // Pre-roll releases when the queue holds a full pre-roll, or when the
+    // timeout elapses (a short reply never fills the queue). Pure function so
+    // host tests can exercise the release condition without the audio task.
+    static bool PrefillReady(size_t queued_frames, int64_t elapsed_us) {
+        return queued_frames >= kPlaybackPrefillFrames || elapsed_us >= kPrefillTimeoutUs;
+    }
     bool prefill_pending_ = true;
     int64_t prefill_first_frame_us_ = 0;
 

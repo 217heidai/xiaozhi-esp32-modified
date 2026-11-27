@@ -34,7 +34,9 @@ public:
     virtual void EnableInput(bool enable);
     virtual void EnableOutput(bool enable);
 
-    virtual void OutputData(std::vector<int16_t>& data);
+    // Returns samples actually written (0 when the I2S write fails or output
+    // is disabled). Callers counting successful output must check the return.
+    virtual int OutputData(std::vector<int16_t>& data);
     virtual bool InputData(std::vector<int16_t>& data);
     virtual void Start();
 

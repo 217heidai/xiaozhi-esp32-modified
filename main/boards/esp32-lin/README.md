@@ -393,6 +393,9 @@ I (xxxx) AudioCodec: Set output volume to 51
     `application.h` 的 3 个 `wd_` 成员。改后用「`Speaking stalled: no audio` 日志应为 0」加真机验证。
   - **板级行为，已下沉不占 core**：WM8978 AUTO-MUTE dither 在
     `wm8978_audio_codec.cc::OutputData()` 里，官方动 core 音频链路不受影响。
+  - **根 README 已恢复成上游原样**：只在标题下加了 7 行 fork note（本分支说明 +
+    指向本文件），与上游的 diff 只有这 7 行，同步时正常合并即可；上游若重写
+    README 顶部导致冲突，保留 fork note 那几行就行，不用再整文件重写。
   - 同步后固定动作：`python3 scripts/build.py esp32-lin --language zh-CN` 编译
     （build.py 会重置 sdkconfig，**必须带 `--language zh-CN`**），烧 `0x10000`，
     抓 45 s 启动日志确认 0 WDT / 0 E 级 / 内存稳定。

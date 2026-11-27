@@ -53,7 +53,7 @@ public:
     // samples. Keep this board quirk here, not in the shared AudioService:
     // a sparse +/-1 LSB dither on a silent frame prevents a false mute during
     // TTS sentence pauses; real audio (samples beyond +/-1) is untouched.
-    virtual void OutputData(std::vector<int16_t>& data) override;
+    virtual int OutputData(std::vector<int16_t>& data) override;
 };
 
 #endif  // _WM8978_AUDIO_CODEC_H_

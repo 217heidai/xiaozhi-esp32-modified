@@ -326,7 +326,9 @@ int Wm8978AudioCodec::Read(int16_t* dest, int samples) {
 int Wm8978AudioCodec::Write(const int16_t* data, int samples) {
     std::lock_guard<std::mutex> lock(data_mutex_);
     if (!output_enabled_) {
-        return samples;
+        // Nothing was written; report 0 so callers counting successful
+        // output (the speaking watchdog) do not mistake this for a frame out.
+        return 0;
     }
     auto needed = (size_t)samples * 2;
     if (tx_buffer_.size() < needed) {
@@ -454,7 +456,7 @@ void Wm8978AudioCodec::EnableOutput(bool enable) {
     ApplyOutputVolume();
 }
 
-void Wm8978AudioCodec::OutputData(std::vector<int16_t>& data) {
+int Wm8978AudioCodec::OutputData(std::vector<int16_t>& data) {
     // Board-specific WM8978 AUTO-MUTE workaround, kept out of core AudioService.
     // A silent keep-alive frame is all zeros; 1024 consecutive zeros make the
     // codec mute its analogue output and the unmute at the next real frame is
@@ -476,5 +478,5 @@ void Wm8978AudioCodec::OutputData(std::vector<int16_t>& data) {
             data[i] = ((i / 128) & 1) ? 1 : -1;
         }
     }
-    AudioCodec::OutputData(data);
+    return AudioCodec::OutputData(data);
 }

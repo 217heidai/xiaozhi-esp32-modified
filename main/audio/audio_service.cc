@@ -362,10 +362,8 @@ void AudioService::AudioOutputTask() {
                     if (prefill_first_frame_us_ == 0) {
                         prefill_first_frame_us_ = esp_timer_get_time();
                     }
-                    const bool filled = audio_playback_queue_.size() >= kPlaybackPrefillFrames;
-                    const bool timed_out =
-                        esp_timer_get_time() - prefill_first_frame_us_ >= kPrefillTimeoutUs;
-                    return filled || timed_out;
+                    return PrefillReady(audio_playback_queue_.size(),
+                                      esp_timer_get_time() - prefill_first_frame_us_);
                 }
                 return true;
             });
@@ -404,8 +402,14 @@ void AudioService::AudioOutputTask() {
                 }
             } else if (!stream_live) {
                 // Real stall (>1 s without a frame) or a fresh stream: arm pre-roll
-                // so a restart does not begin from an empty queue.
+                // so a restart does not begin from an empty queue. Reset the
+                // timestamps too: the prefill predicate requires
+                // last_real_frame_us_ == 0, and the timeout is measured from
+                // prefill_first_frame_us_, which is stale from the first
+                // pre-fill. (Same reset as ResetDecoder.)
                 prefill_pending_ = true;
+                last_real_frame_us_ = 0;
+                prefill_first_frame_us_ = 0;
             }
             continue;
         }
@@ -436,12 +440,14 @@ void AudioService::AudioOutputTask() {
             callbacks_.on_playback_progress(task.playback_id, task.media_position_ms);
         }
 
-        codec_->OutputData(task.pcm);
+        const int written = codec_->OutputData(task.pcm);
 
         /* Update the last output time */
         last_output_time_ = std::chrono::steady_clock::now();
         debug_statistics_.playback_count++;
-        output_frame_count_.fetch_add(1);  // 看门狗判据：真实成功输出一帧
+        if (written > 0) {
+            output_frame_count_.fetch_add(1);  // 看门狗判据：真实成功输出一帧
+        }
 
         bool notify_drained = false;
         lock.lock();
